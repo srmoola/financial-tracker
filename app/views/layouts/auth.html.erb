@@ -1,0 +1,18 @@
+<% content_for :content do %>
+  <div class="min-h-screen bg-pastel flex flex-col items-center justify-center px-4 py-12">
+    <div class="mb-8"><%= render "shared/logo" %></div>
+
+    <div class="w-full max-w-md">
+      <%= render "shared/flash" %>
+
+      <div class="card bg-base-100 border border-base-300 shadow-xl shadow-black/5">
+        <div class="card-body p-8 sm:p-10">
+          <%= yield %>
+        </div>
+      </div>
+    </div>
+
+    <p class="mt-8 text-sm text-base-content/60">&copy; <%= Date.current.year %> Financial Tracker</p>
+  </div>
+<% end %>
+<%= render template: "layouts/application" %>

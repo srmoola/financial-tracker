@@ -1,0 +1,241 @@
+<% content_for :title, "Financial Tracker · See all your money in one place" %>
+
+<%# NOTE: numbers, stats and copy on this page are placeholders. %>
+
+<header class="sticky top-0 z-30 border-b border-base-300/60 bg-base-100/80 backdrop-blur">
+  <nav class="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-8">
+    <%= render "shared/logo" %>
+
+    <div class="hidden items-center gap-8 text-sm font-medium md:flex">
+      <a href="#features" class="hover:text-base-content/70">Features</a>
+      <a href="#how-it-works" class="hover:text-base-content/70">How it works</a>
+      <a href="#security" class="hover:text-base-content/70">Security</a>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <%= link_to "Log in", new_session_path, class: "btn btn-ghost btn-sm sm:btn-md" %>
+      <%= link_to "Get started", sign_up_path, class: "btn btn-primary btn-sm sm:btn-md" %>
+    </div>
+  </nav>
+</header>
+
+<main>
+  <%# Hero %>
+  <section class="relative overflow-hidden bg-pastel">
+    <div class="pointer-events-none absolute -left-32 -top-32 size-96 rounded-full bg-mint/40 blur-3xl"></div>
+    <div class="pointer-events-none absolute -right-24 top-40 size-96 rounded-full bg-violet/20 blur-3xl"></div>
+
+    <div class="relative mx-auto grid max-w-7xl items-center gap-16 px-4 py-20 sm:px-8 lg:grid-cols-2 lg:py-28">
+      <div>
+        <span class="badge badge-lg border-base-300 bg-base-100/70 font-medium">
+          <span class="size-2 rounded-full bg-success"></span>
+          Now in early access
+        </span>
+
+        <h1 class="mt-6 text-5xl font-extrabold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">
+          See all your money in <span class="text-gradient">one place</span>
+        </h1>
+
+        <p class="mt-6 max-w-xl text-lg text-base-content/70 sm:text-xl">
+          Connect your accounts, track spending automatically and know exactly where every dollar goes, without the spreadsheets.
+        </p>
+
+        <div class="mt-10 flex flex-col gap-3 sm:flex-row">
+          <%= link_to "Get started for free", sign_up_path, class: "btn btn-primary btn-lg" %>
+          <%= link_to "Log in", new_session_path, class: "btn btn-lg border-base-content/20 bg-base-100/70" %>
+        </div>
+
+        <p class="mt-6 text-sm text-base-content/60">Free to start · No credit card required</p>
+      </div>
+
+      <%# Product preview %>
+      <div class="relative mx-auto w-full max-w-lg">
+        <div class="card border border-base-300 bg-base-100 shadow-2xl shadow-black/10">
+          <div class="card-body gap-6 p-6 sm:p-8">
+            <div class="flex items-start justify-between">
+              <div>
+                <p class="text-sm font-medium text-base-content/60">Net worth</p>
+                <p class="mt-1 text-4xl font-bold tracking-tight">$48,213.40</p>
+              </div>
+              <span class="badge badge-soft badge-success font-semibold">+2.4% this month</span>
+            </div>
+
+            <svg class="h-32 w-full" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true">
+              <defs>
+                <linearGradient id="chart-fill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#42f0cd" stop-opacity="0.45" />
+                  <stop offset="1" stop-color="#42f0cd" stop-opacity="0" />
+                </linearGradient>
+                <linearGradient id="chart-line" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0" stop-color="#42f0cd" />
+                  <stop offset="1" stop-color="#0dadf2" />
+                </linearGradient>
+              </defs>
+              <path d="M0 95 C40 90 60 70 100 74 S160 88 200 62 S270 50 300 40 S360 30 400 14 V120 H0 Z" fill="url(#chart-fill)" />
+              <path d="M0 95 C40 90 60 70 100 74 S160 88 200 62 S270 50 300 40 S360 30 400 14" fill="none" stroke="url(#chart-line)" stroke-width="3" stroke-linecap="round" />
+            </svg>
+
+            <ul class="divide-y divide-base-300">
+              <% [ [ "Everyday Checking", "•••• 4821", "$6,240.12", "bg-sky-soft text-secondary" ],
+                   [ "High-Yield Savings", "•••• 1930", "$21,905.00", "bg-mint-soft text-teal" ],
+                   [ "Brokerage", "•••• 7702", "$22,318.28", "bg-violet-soft text-violet" ],
+                   [ "Rewards Credit Card", "•••• 0415", "−$2,250.00", "bg-base-200 text-base-content" ] ].each do |name, mask, balance, tile| %>
+                <li class="flex items-center gap-3 py-3">
+                  <div class="grid size-10 place-items-center rounded-xl text-sm font-bold <%= tile %>"><%= name.first %></div>
+                  <div class="min-w-0 flex-1">
+                    <p class="truncate font-medium"><%= name %></p>
+                    <p class="text-xs text-base-content/50"><%= mask %></p>
+                  </div>
+                  <p class="flex-none font-semibold tabular-nums"><%= balance %></p>
+                </li>
+              <% end %>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card absolute -bottom-14 -left-6 hidden w-72 border border-base-300 bg-base-100 shadow-xl shadow-black/10 sm:flex">
+          <div class="card-body flex-row items-center gap-3 p-4">
+            <div class="grid size-10 place-items-center rounded-full bg-mint-soft text-teal">
+              <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z" />
+                <circle cx="7.5" cy="7.5" r="1.5" />
+              </svg>
+            </div>
+            <div class="flex-1">
+              <p class="text-sm font-semibold">Groceries</p>
+              <p class="text-xs text-base-content/50">Categorized automatically</p>
+            </div>
+            <p class="flex-none text-sm font-semibold tabular-nums">−$84.20</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <%# Stats (placeholders) %>
+  <section class="border-b border-base-300">
+    <div class="mx-auto grid max-w-7xl gap-8 px-4 py-14 text-center sm:grid-cols-3 sm:px-8">
+      <% [ [ "50k+", "people tracking their money" ], [ "$1.2B", "in balances synced" ], [ "4.9/5", "average app rating" ] ].each do |value, label| %>
+        <div>
+          <p class="text-4xl font-extrabold tracking-tight"><%= value %></p>
+          <p class="mt-1 text-base-content/60"><%= label %></p>
+        </div>
+      <% end %>
+    </div>
+  </section>
+
+  <%# Features %>
+  <section id="features" class="mx-auto max-w-7xl scroll-mt-20 px-4 py-24 sm:px-8">
+    <div class="max-w-2xl">
+      <p class="font-semibold text-teal">Features</p>
+      <h2 class="mt-2 text-4xl font-extrabold tracking-tight sm:text-5xl">Everything you need to understand your money</h2>
+      <p class="mt-4 text-lg text-base-content/70">One dashboard for every account, with the insights to help you spend smarter and save more.</p>
+    </div>
+
+    <div class="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <% [
+        [ "Automatic categories", "Every transaction is sorted into categories as it comes in, so you never have to tag things by hand.", "bg-mint-soft text-teal", '<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="7.5" cy="7.5" r="1.5"/>' ],
+        [ "Budgets that adapt", "Set monthly limits by category and get a heads-up before you go over.", "bg-sky-soft text-secondary", '<path d="M21 12A9 9 0 1 1 12 3v9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/>' ],
+        [ "Net worth over time", "Watch your assets and debts add up in a single, always-current number.", "bg-violet-soft text-violet", '<path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/>' ],
+        [ "Recurring bills", "Spot subscriptions and upcoming bills before they hit your account.", "bg-violet-soft text-violet", '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>' ],
+        [ "Savings goals", "Put money toward what matters and track your progress along the way.", "bg-mint-soft text-teal", '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>' ],
+        [ "Spending insights", "See trends month over month and find out where your money really goes.", "bg-sky-soft text-secondary", '<path d="M3 21h18M6 17v-5M11 17V7M16 17v-8M21 17v-3"/>' ]
+      ].each do |title, body, tile, icon| %>
+        <div class="card border border-base-300 bg-base-100 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/5">
+          <div class="card-body gap-3 p-7">
+            <div class="grid size-12 place-items-center rounded-2xl <%= tile %>">
+              <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><%= icon.html_safe %></svg>
+            </div>
+            <h3 class="mt-2 text-lg font-bold"><%= title %></h3>
+            <p class="text-base-content/70"><%= body %></p>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </section>
+
+  <%# How it works %>
+  <section id="how-it-works" class="scroll-mt-20 bg-base-200">
+    <div class="mx-auto max-w-7xl px-4 py-24 sm:px-8">
+      <div class="mx-auto max-w-2xl text-center">
+        <p class="font-semibold text-teal">How it works</p>
+        <h2 class="mt-2 text-4xl font-extrabold tracking-tight sm:text-5xl">Up and running in minutes</h2>
+      </div>
+
+      <ol class="mt-14 grid gap-6 md:grid-cols-3">
+        <% [ [ "Create your account", "Sign up with your email. It takes less than a minute." ],
+             [ "Connect your accounts", "Securely link your banks, cards and investments." ],
+             [ "See the full picture", "Your balances, spending and trends, all updated automatically." ] ].each_with_index do |(title, body), index| %>
+          <li class="card border border-base-300 bg-base-100">
+            <div class="card-body gap-3 p-7">
+              <span class="grid size-10 place-items-center rounded-full bg-primary font-bold text-primary-content"><%= index + 1 %></span>
+              <h3 class="mt-2 text-lg font-bold"><%= title %></h3>
+              <p class="text-base-content/70"><%= body %></p>
+            </div>
+          </li>
+        <% end %>
+      </ol>
+    </div>
+  </section>
+
+  <%# Security %>
+  <section id="security" class="scroll-mt-20 bg-primary text-primary-content">
+    <div class="mx-auto grid max-w-7xl gap-14 px-4 py-24 sm:px-8 lg:grid-cols-2 lg:items-center">
+      <div>
+        <p class="font-semibold text-mint">Security</p>
+        <h2 class="mt-2 text-4xl font-extrabold tracking-tight sm:text-5xl">Your data stays yours</h2>
+        <p class="mt-4 text-lg text-primary-content/70">We take protecting your financial information seriously, and we'll never sell your data.</p>
+      </div>
+
+      <ul class="grid gap-6">
+        <% [ [ "Encrypted end to end", "Your data is encrypted in transit and at rest.", '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>' ],
+             [ "Read-only access", "We can see your balances and transactions, but we can never move your money.", '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>' ],
+             [ "You're in control", "Disconnect an account or delete your data at any time.", '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>' ] ].each do |title, body, icon| %>
+          <li class="flex gap-4">
+            <div class="grid size-12 shrink-0 place-items-center rounded-2xl bg-white/10 text-mint">
+              <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><%= icon.html_safe %></svg>
+            </div>
+            <div>
+              <h3 class="text-lg font-bold"><%= title %></h3>
+              <p class="mt-1 text-primary-content/70"><%= body %></p>
+            </div>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+  </section>
+
+  <%# Call to action %>
+  <section class="mx-auto max-w-7xl px-4 py-24 sm:px-8">
+    <div class="relative overflow-hidden rounded-[2rem] bg-pastel px-6 py-16 text-center sm:px-16">
+      <div class="pointer-events-none absolute -right-20 -top-20 size-72 rounded-full bg-mint/40 blur-3xl"></div>
+      <h2 class="relative text-4xl font-extrabold tracking-tight sm:text-5xl">Take control of your finances today</h2>
+      <p class="relative mx-auto mt-4 max-w-xl text-lg text-base-content/70">Join thousands of people who finally know where their money goes.</p>
+      <%= link_to "Get started for free", sign_up_path, class: "btn btn-primary btn-lg relative mt-10" %>
+    </div>
+  </section>
+</main>
+
+<footer class="border-t border-base-300">
+  <div class="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-8 md:grid-cols-5">
+    <div class="md:col-span-2">
+      <%= render "shared/logo" %>
+      <p class="mt-4 max-w-xs text-sm text-base-content/60">The simplest way to see, understand and grow your money.</p>
+    </div>
+
+    <% { "Product" => [ "Features", "Security", "Pricing" ], "Company" => [ "About", "Careers", "Contact" ], "Legal" => [ "Privacy", "Terms" ] }.each do |heading, links| %>
+      <div>
+        <p class="text-sm font-semibold"><%= heading %></p>
+        <ul class="mt-4 space-y-3 text-sm text-base-content/60">
+          <% links.each do |link| %>
+            <li><a href="#" class="hover:text-base-content"><%= link %></a></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="border-t border-base-300">
+    <p class="mx-auto max-w-7xl px-4 py-6 text-sm text-base-content/50 sm:px-8">&copy; <%= Date.current.year %> Financial Tracker. All rights reserved.</p>
+  </div>
+</footer>

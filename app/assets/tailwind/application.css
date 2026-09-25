@@ -1,3 +1,83 @@
 @import "tailwindcss";
 @source not "./daisyui{,*}.mjs";
-@plugin "./daisyui.mjs";
+@plugin "./daisyui.mjs" {
+  themes: false;
+}
+
+/* Light theme modeled on Plaid's palette: near-black pill buttons, neutral grays, mint/blue accents. */
+@plugin "./daisyui-theme.mjs" {
+  name: "tracker";
+  default: true;
+  prefersdark: false;
+  color-scheme: light;
+
+  --color-base-100: #ffffff;
+  --color-base-200: #fafafa;
+  --color-base-300: #ededed;
+  --color-base-content: #111112;
+  --color-primary: #111112;
+  --color-primary-content: #ffffff;
+  --color-secondary: #0a85ea;
+  --color-secondary-content: #ffffff;
+  --color-accent: #42f0cd;
+  --color-accent-content: #111112;
+  --color-neutral: #383838;
+  --color-neutral-content: #ffffff;
+  --color-info: #0a85ea;
+  --color-info-content: #ffffff;
+  --color-success: #1fa077;
+  --color-success-content: #ffffff;
+  --color-warning: #e6ba23;
+  --color-warning-content: #111112;
+  --color-error: #d83d57;
+  --color-error-content: #ffffff;
+
+  --radius-selector: 2rem;
+  --radius-field: 0.5rem;
+  --radius-box: 1rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --color-mint: #42f0cd;
+  --color-mint-soft: #d0fce4;
+  --color-teal: #088181;
+  --color-teal-dark: #05565c;
+  --color-sky: #0dadf2;
+  --color-sky-soft: #d4f9ff;
+  --color-violet: #7646ec;
+  --color-violet-soft: #e1e1ff;
+}
+
+@layer components {
+  /* Plaid-style pill buttons */
+  .btn {
+    --radius-field: 9999px;
+    font-weight: 600;
+  }
+
+  /* Soft pastel backdrop used on the landing hero and auth pages */
+  .bg-pastel {
+    background: linear-gradient(to bottom left, #e6e6ff 0%, #e5effe 50%, #ccf8ff 100%);
+  }
+
+  .text-gradient {
+    background: linear-gradient(33deg, #0dadf2, #7646ec);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+/* Blue focus ring on inputs, like Plaid's forms. daisyUI sets the focus color in the
+   utilities layer, so this has to live there too (and be more specific) to win. */
+@layer utilities {
+  input.input:focus {
+    --input-color: var(--color-secondary);
+  }
+}

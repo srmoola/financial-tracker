@@ -1,0 +1,56 @@
+<% content_for :content do %>
+  <div class="drawer lg:drawer-open">
+    <input id="sidebar" type="checkbox" class="drawer-toggle">
+
+    <div class="drawer-content flex min-h-screen flex-col bg-base-200">
+      <header class="flex items-center gap-3 border-b border-base-300 bg-base-100 px-4 py-3 lg:hidden">
+        <label for="sidebar" class="btn btn-ghost btn-square btn-sm" aria-label="Open menu">
+          <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <path d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </label>
+        <%= render "shared/logo" %>
+      </header>
+
+      <main class="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-8 lg:py-12">
+        <%= render "shared/flash" %>
+        <%= yield %>
+      </main>
+    </div>
+
+    <div class="drawer-side z-20">
+      <label for="sidebar" class="drawer-overlay" aria-label="Close menu"></label>
+
+      <aside class="flex min-h-full w-64 flex-col border-r border-base-300 bg-base-100 px-4 py-6">
+        <div class="px-2"><%= render "shared/logo" %></div>
+
+        <ul class="menu mt-8 w-full gap-1 p-0">
+          <li>
+            <%= link_to root_path, class: class_names("rounded-lg font-medium", "bg-base-200 font-semibold": current_page?(root_path)) do %>
+              <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="3" width="7" height="9" rx="1.5" />
+                <rect x="14" y="3" width="7" height="5" rx="1.5" />
+                <rect x="14" y="12" width="7" height="9" rx="1.5" />
+                <rect x="3" y="16" width="7" height="5" rx="1.5" />
+              </svg>
+              Overview
+            <% end %>
+          </li>
+        </ul>
+
+        <div class="mt-auto border-t border-base-300 pt-4">
+          <div class="flex items-center gap-3 px-2">
+            <div class="avatar avatar-placeholder">
+              <div class="w-9 rounded-full bg-primary text-primary-content">
+                <span class="text-sm font-semibold"><%= Current.user.email_address.first.upcase %></span>
+              </div>
+            </div>
+            <p class="min-w-0 flex-1 truncate text-sm font-medium"><%= Current.user.email_address %></p>
+          </div>
+          <%= button_to "Log out", session_path, method: :delete, class: "btn btn-ghost btn-sm btn-block mt-3 justify-start" %>
+        </div>
+      </aside>
+    </div>
+  </div>
+<% end %>
+<%= render template: "layouts/application" %>
