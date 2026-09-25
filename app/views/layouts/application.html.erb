@@ -23,8 +23,27 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body>
-    <main class="container mx-auto mt-28 px-5 flex">
+  <body class="min-h-screen bg-base-200">
+    <nav class="navbar bg-base-100 shadow-sm px-4">
+      <div class="flex-1">
+        <%= link_to "Financial Tracker", root_path, class: "text-xl font-bold" %>
+      </div>
+      <% if authenticated? %>
+        <div class="flex items-center gap-4">
+          <span class="text-sm"><%= Current.user.email_address %></span>
+          <%= button_to "Log out", session_path, method: :delete, class: "btn btn-ghost btn-sm" %>
+        </div>
+      <% end %>
+    </nav>
+
+    <main class="container mx-auto px-4 py-10">
+      <% if alert = flash[:alert] %>
+        <div role="alert" class="alert alert-error mb-6 max-w-md mx-auto" id="alert"><%= alert %></div>
+      <% end %>
+      <% if notice = flash[:notice] %>
+        <div role="alert" class="alert alert-success mb-6 max-w-md mx-auto" id="notice"><%= notice %></div>
+      <% end %>
+
       <%= yield %>
     </main>
   </body>
