@@ -42,10 +42,13 @@
           <div class="flex items-center gap-3 px-2">
             <div class="avatar avatar-placeholder">
               <div class="w-9 rounded-full bg-primary text-primary-content">
-                <span class="text-sm font-semibold"><%= Current.user.email_address.first.upcase %></span>
+                <span class="text-sm font-semibold"><%= Current.user.initials %></span>
               </div>
             </div>
-            <p class="min-w-0 flex-1 truncate text-sm font-medium"><%= Current.user.email_address %></p>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-semibold"><%= Current.user.full_name %></p>
+              <p class="truncate text-xs text-base-content/60"><%= Current.user.email_address %></p>
+            </div>
           </div>
           <%= button_to "Log out", session_path, method: :delete, class: "btn btn-ghost btn-sm btn-block mt-3 justify-start" %>
         </div>

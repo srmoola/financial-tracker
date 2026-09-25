@@ -17,7 +17,7 @@ RSpec.describe "Pages", type: :request do
     get root_path
 
     expect(response).to have_http_status(:success)
-    expect(response.body).to include("Overview", "Signed in as #{users(:one).email_address}", "Log out")
+    expect(response.body).to include("Welcome back, Jane", "Jane Doe", "JD", "Log out")
     expect(response.body).not_to include("See all your money in")
   end
 end

@@ -14,9 +14,21 @@
     </div>
   <% end %>
 
+  <div class="grid gap-5 sm:grid-cols-2">
+    <div>
+      <%= form.label :first_name, class: "mb-1.5 block text-sm font-medium" %>
+      <%= form.text_field :first_name, required: true, autofocus: true, autocomplete: "given-name", placeholder: "Jane", class: "input input-lg w-full" %>
+    </div>
+
+    <div>
+      <%= form.label :last_name, class: "mb-1.5 block text-sm font-medium" %>
+      <%= form.text_field :last_name, required: true, autocomplete: "family-name", placeholder: "Doe", class: "input input-lg w-full" %>
+    </div>
+  </div>
+
   <div>
     <%= form.label :email_address, "Email", class: "mb-1.5 block text-sm font-medium" %>
-    <%= form.email_field :email_address, required: true, autofocus: true, autocomplete: "username", placeholder: "you@example.com", class: "input input-lg w-full" %>
+    <%= form.email_field :email_address, required: true, autocomplete: "username", placeholder: "you@example.com", class: "input input-lg w-full" %>
   </div>
 
   <div>
