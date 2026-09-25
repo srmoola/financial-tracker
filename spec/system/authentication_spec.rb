@@ -8,12 +8,14 @@ RSpec.describe "Authentication", type: :system do
     expect(page).to have_text("See all your money in one place")
 
     click_on "Get started"
+    fill_in "First name", with: "Ada"
+    fill_in "Last name", with: "Lovelace"
     fill_in "Email", with: "new@example.com"
     fill_in "Password", with: "password123"
     fill_in "Password confirmation", with: "password123"
     click_on "Sign up"
 
-    expect(page).to have_text("Signed in as new@example.com")
+    expect(page).to have_text("Welcome back, Ada")
 
     click_on "Log out"
     expect(page).to have_current_path(new_session_path)
@@ -22,7 +24,7 @@ RSpec.describe "Authentication", type: :system do
     fill_in "Password", with: "password123"
     click_on "Log in"
 
-    expect(page).to have_text("Signed in as new@example.com")
+    expect(page).to have_text("Welcome back, Ada")
   end
 
   it "shows an error for a wrong password" do

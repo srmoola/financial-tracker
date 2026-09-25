@@ -1,8 +1,8 @@
 <% content_for :title, "Overview · Financial Tracker" %>
 
 <div class="flex flex-col gap-1">
-  <h1 class="text-3xl font-bold tracking-tight">Overview</h1>
-  <p class="text-base-content/70">Signed in as <%= Current.user.email_address %></p>
+  <h1 class="text-3xl font-bold tracking-tight">Welcome back, <%= Current.user.first_name %></h1>
+  <p class="text-base-content/70">Here's an overview of your finances.</p>
 </div>
 
 <div class="mt-8 grid gap-4 sm:grid-cols-3">
