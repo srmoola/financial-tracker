@@ -1,8 +1,36 @@
-<div class="hero">
-  <div class="hero-content text-center">
-    <div>
-      <h1 class="text-4xl font-bold">Financial Tracker</h1>
-      <p class="py-4">You're signed in as <%= Current.user.email_address %>.</p>
+<% content_for :title, "Overview · Financial Tracker" %>
+
+<div class="flex flex-col gap-1">
+  <h1 class="text-3xl font-bold tracking-tight">Overview</h1>
+  <p class="text-base-content/70">Signed in as <%= Current.user.email_address %></p>
+</div>
+
+<div class="mt-8 grid gap-4 sm:grid-cols-3">
+  <% [ [ "Net worth", "Across all accounts" ], [ "Cash", "Checking and savings" ], [ "Spent this month", "All categories" ] ].each do |label, hint| %>
+    <div class="card border border-base-300 bg-base-100">
+      <div class="card-body gap-1 p-6">
+        <p class="text-sm font-medium text-base-content/70"><%= label %></p>
+        <p class="text-3xl font-bold tracking-tight">$0.00</p>
+        <p class="text-xs text-base-content/50"><%= hint %></p>
+      </div>
     </div>
+  <% end %>
+</div>
+
+<div class="card mt-6 overflow-hidden border border-base-300 bg-base-100">
+  <div class="card-body items-center gap-4 p-10 text-center sm:p-14">
+    <div class="grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-mint to-sky">
+      <svg class="size-7 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 10h18" />
+        <path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8" />
+        <path d="M3 21h18" />
+        <path d="M12 3 3 8h18z" />
+      </svg>
+    </div>
+    <div>
+      <h2 class="text-xl font-bold tracking-tight">Connect your first account</h2>
+      <p class="mt-1 max-w-md text-base-content/70">Link a bank, card or investment account to see your balances and transactions in one place.</p>
+    </div>
+    <span class="badge badge-soft badge-secondary">Coming soon</span>
   </div>
 </div>

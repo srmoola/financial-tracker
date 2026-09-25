@@ -1,0 +1,16 @@
+<% gradient_id = "logo-gradient-#{SecureRandom.hex(4)}" %>
+<%= link_to root_path, class: "inline-flex items-center gap-2 font-bold text-lg tracking-tight" do %>
+  <svg class="size-7" viewBox="0 0 32 32" aria-hidden="true">
+    <defs>
+      <linearGradient id="<%= gradient_id %>" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" stop-color="#42f0cd" />
+        <stop offset="1" stop-color="#0dadf2" />
+      </linearGradient>
+    </defs>
+    <rect width="32" height="32" rx="8" fill="#111112" />
+    <rect x="7" y="17" width="4" height="8" rx="2" fill="url(#<%= gradient_id %>)" />
+    <rect x="14" y="12" width="4" height="13" rx="2" fill="url(#<%= gradient_id %>)" />
+    <rect x="21" y="7" width="4" height="18" rx="2" fill="url(#<%= gradient_id %>)" />
+  </svg>
+  <span>Financial Tracker</span>
+<% end %>

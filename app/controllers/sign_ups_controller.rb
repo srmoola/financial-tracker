@@ -1,4 +1,5 @@
 class SignUpsController < ApplicationController
+  layout "auth"
   unauthenticated_access_only
   rate_limit to: 10, within: 3.minutes, only: :create, with: -> { redirect_to sign_up_path, alert: "Try again later." }
 

@@ -18,33 +18,16 @@
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/icon.png">
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+
     <%# Includes all stylesheet files in app/assets/stylesheets %>
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
   </head>
 
-  <body class="min-h-screen bg-base-200">
-    <nav class="navbar bg-base-100 shadow-sm px-4">
-      <div class="flex-1">
-        <%= link_to "Financial Tracker", root_path, class: "text-xl font-bold" %>
-      </div>
-      <% if authenticated? %>
-        <div class="flex items-center gap-4">
-          <span class="text-sm"><%= Current.user.email_address %></span>
-          <%= button_to "Log out", session_path, method: :delete, class: "btn btn-ghost btn-sm" %>
-        </div>
-      <% end %>
-    </nav>
-
-    <main class="container mx-auto px-4 py-10">
-      <% if alert = flash[:alert] %>
-        <div role="alert" class="alert alert-error mb-6 max-w-md mx-auto" id="alert"><%= alert %></div>
-      <% end %>
-      <% if notice = flash[:notice] %>
-        <div role="alert" class="alert alert-success mb-6 max-w-md mx-auto" id="notice"><%= notice %></div>
-      <% end %>
-
-      <%= yield %>
-    </main>
+  <body class="min-h-screen bg-base-100 text-base-content font-sans antialiased">
+    <%= content_for?(:content) ? yield(:content) : yield %>
   </body>
 </html>
