@@ -32,6 +32,9 @@ Rails.application.configure do
   config.active_job.queue_adapter = :solid_queue
   config.solid_queue.connects_to = { database: { writing: :queue } }
 
+  # Open the Mission Control - Jobs dashboard (/jobs) without HTTP basic auth in development.
+  config.mission_control.jobs.http_basic_auth_enabled = false
+
   # Store uploaded files on the local file system (see config/storage.yml for options).
   config.active_storage.service = :local
 
