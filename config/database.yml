@@ -95,11 +95,16 @@ test:
 # for a full overview on how database connection configuration can be specified.
 #
 production:
+  # The database server comes from DB_HOST, DB_PORT, DB_USERNAME and DB_PASSWORD
+  # (on Northflank, linked from the PostgreSQL addon's connection details). The
+  # user must be able to create databases: db:prepare creates all four below.
   primary: &primary_production
     <<: *default
     database: financial_tracker_production
-    username: financial_tracker
-    password: <%= ENV["FINANCIAL_TRACKER_DATABASE_PASSWORD"] %>
+    host: <%= ENV["DB_HOST"] %>
+    port: <%= ENV.fetch("DB_PORT", 5432) %>
+    username: <%= ENV["DB_USERNAME"] %>
+    password: <%= ENV["DB_PASSWORD"] %>
   cache:
     <<: *primary_production
     database: financial_tracker_production_cache
