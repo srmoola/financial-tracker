@@ -29,10 +29,6 @@ development:
   primary:
     <<: *default
     database: financial_tracker_development
-  queue:
-    <<: *default
-    database: financial_tracker_development_queue
-    migrations_paths: db/queue_migrate
 
   # The specified database role being used to connect to PostgreSQL.
   # To create additional roles in PostgreSQL see `$ createuser --help`.
@@ -95,25 +91,14 @@ test:
 # for a full overview on how database connection configuration can be specified.
 #
 production:
-  # The database server comes from DB_HOST, DB_PORT, DB_USERNAME and DB_PASSWORD
-  # (on Northflank, linked from the PostgreSQL addon's connection details). The
-  # user must be able to create databases: db:prepare creates all four below.
-  primary: &primary_production
+  # One database for everything, including Solid Queue, Cache and Cable's
+  # tables. The server and database come from DB_HOST, DB_PORT, DB_NAME,
+  # DB_USERNAME and DB_PASSWORD (on Northflank, linked from the PostgreSQL
+  # addon's connection details); the database must already exist.
+  primary:
     <<: *default
-    database: financial_tracker_production
     host: <%= ENV["DB_HOST"] %>
     port: <%= ENV.fetch("DB_PORT", 5432) %>
+    database: <%= ENV.fetch("DB_NAME", "financial_tracker_production") %>
     username: <%= ENV["DB_USERNAME"] %>
     password: <%= ENV["DB_PASSWORD"] %>
-  cache:
-    <<: *primary_production
-    database: financial_tracker_production_cache
-    migrations_paths: db/cache_migrate
-  queue:
-    <<: *primary_production
-    database: financial_tracker_production_queue
-    migrations_paths: db/queue_migrate
-  cable:
-    <<: *primary_production
-    database: financial_tracker_production_cable
-    migrations_paths: db/cable_migrate
