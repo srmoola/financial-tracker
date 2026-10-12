@@ -1,7 +1,7 @@
 <%# locals: (chart:, aria_label:, details: nil, details_hint: nil) %>
 <%# A line chart laid out by LineChartHelper#line_chart: y-axis labels, the plot with its
     hover layer (line_chart Stimulus controller), end-of-line labels, and x-axis labels.
-    `details` (HTML per point, optional) open in a popover when a point is clicked;
+    `details` (HTML per point, optional) open in a second box when a point is clicked;
     `details_hint` says so in the tooltip. %>
 <div class="<%= class_names("grid grid-cols-[3rem_1fr] gap-x-3", "sm:mr-24": chart.lines.size > 1) %>"
      data-controller="line-chart" data-line-chart-points-value="<%= chart.hover.to_json %>"
@@ -17,7 +17,7 @@
          tabindex="0" role="img"
          aria-label="<%= aria_label %>"
          data-line-chart-target="plot"
-         data-action="pointermove->line-chart#move pointerleave->line-chart#hide focus->line-chart#focus blur->line-chart#hide keydown->line-chart#key<%= " click->line-chart#open" if details %>">
+         data-action="pointermove->line-chart#move pointerleave->line-chart#hide focus->line-chart#focus blur->line-chart#hide keydown->line-chart#key<%= " click->line-chart#toggle" if details %>">
       <% chart.y_ticks.each do |tick| %>
         <div class="absolute inset-x-0 border-t border-base-300" style="top: <%= tick.position %>%" aria-hidden="true"></div>
       <% end %>
