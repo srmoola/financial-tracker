@@ -24,7 +24,7 @@
 
   <%# Everything below updates in place (range, category, page) without reloading the page. %>
   <%= turbo_frame_tag "transactions_content", class: "block transition-opacity aria-busy:opacity-60",
-        data: { turbo_action: "advance", controller: "frame-scroll recategorize transaction-note", transaction_note_max_length_value: Transaction::NOTE_MAX_LENGTH, action: "turbo:click->frame-scroll#remember turbo:frame-render->frame-scroll#restore" } do %>
+        data: { turbo_action: "advance", controller: "frame-scroll recategorize transaction-note", transaction_note_max_length_value: Transaction::NOTE_MAX_LENGTH, action: "turbo:click->frame-scroll#remember turbo:before-frame-render->frame-scroll#keepPosition turbo:frame-render->frame-scroll#restore" } do %>
     <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
       <p class="text-sm font-medium text-base-content/70"><%= range_heading %></p>
       <nav class="tabs tabs-box tabs-sm" aria-label="Time range">
