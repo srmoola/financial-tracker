@@ -29,13 +29,18 @@ class TransactionsController < ApplicationController
       .offset((@page - 1) * PER_PAGE).limit(PER_PAGE)
   end
 
-  # Changes a transaction's category (or resets it to Plaid's), then re-renders the page in place.
+  # Changes a transaction's category (or resets it to Plaid's) and/or its note,
+  # then re-renders the page in place.
   def update
     transaction = Transaction.owned_by(Current.user).find(params[:id])
-    category = params[:category].presence
-    category = nil if category == transaction.category # picking Plaid's own category is a reset
+    changes = {}
+    if params.key?(:category)
+      category = params[:category].presence
+      changes[:category_override] = category == transaction.category ? nil : category # picking Plaid's own category is a reset
+    end
+    changes[:note] = params[:note].to_s if params.key?(:note)
 
-    if transaction.update(category_override: category)
+    if transaction.update(changes)
       redirect_to return_path, status: :see_other
     else
       head :unprocessable_content

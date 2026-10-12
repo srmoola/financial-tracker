@@ -10,11 +10,16 @@ class Transaction < ApplicationRecord
   # The category used everywhere: the user's choice if they made one, otherwise Plaid's.
   EFFECTIVE_CATEGORY_SQL = "COALESCE(transactions.category_override, transactions.category)".freeze
 
+  NOTE_MAX_LENGTH = 280
+
   belongs_to :account
+
+  normalizes :note, with: ->(note) { note.strip.presence }
 
   validates :plaid_transaction_id, presence: true, uniqueness: true
   validates :amount, :date, presence: true
   validates :category_override, inclusion: { in: CATEGORIES }, allow_nil: true
+  validates :note, length: { maximum: NOTE_MAX_LENGTH }
 
   scope :owned_by, ->(user) { joins(account: :plaid_item).where(plaid_items: { user_id: user.id }) }
 

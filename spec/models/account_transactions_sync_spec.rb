@@ -41,15 +41,15 @@ RSpec.describe Account, "syncing transactions" do
     expect(card.reload.transaction_sync_cursor).to eq("newer")
   end
 
-  it "keeps the user's category when a pending charge posts" do
-    card.transactions.create!(plaid_transaction_id: "pending-1", amount: 64.2, date: Date.new(2026, 10, 1), pending: true, category: "GENERAL_MERCHANDISE", category_override: "FOOD_AND_DRINK")
+  it "keeps the user's category and note when a pending charge posts" do
+    card.transactions.create!(plaid_transaction_id: "pending-1", amount: 64.2, date: Date.new(2026, 10, 1), pending: true, category: "GENERAL_MERCHANDISE", category_override: "FOOD_AND_DRINK", note: "Weekly groceries")
     posted = plaid_transaction(id: "posted-1", account_id: "card-1", amount: 64.2, category: "GENERAL_MERCHANDISE")
     posted.pending_transaction_id = "pending-1"
     allow(api).to receive(:transactions_sync).and_return(plaid_sync_response(added: [ posted ], removed: [ "pending-1" ]))
 
     card.sync_transactions!
 
-    expect(card.transactions.pluck(:plaid_transaction_id, :category_override, :pending)).to eq([ [ "posted-1", "FOOD_AND_DRINK", false ] ])
+    expect(card.transactions.pluck(:plaid_transaction_id, :category_override, :note, :pending)).to eq([ [ "posted-1", "FOOD_AND_DRINK", "Weekly groceries", false ] ])
   end
 
   it "never overwrites the user's category when Plaid updates a transaction" do

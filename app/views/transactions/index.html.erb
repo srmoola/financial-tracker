@@ -19,7 +19,7 @@
 
   <%# Everything below updates in place (range, category, page) without reloading the page. %>
   <%= turbo_frame_tag "transactions_content", class: "block transition-opacity aria-busy:opacity-60",
-        data: { turbo_action: "advance", controller: "frame-scroll recategorize", action: "turbo:click->frame-scroll#remember turbo:frame-render->frame-scroll#restore" } do %>
+        data: { turbo_action: "advance", controller: "frame-scroll recategorize transaction-note", transaction_note_max_length_value: Transaction::NOTE_MAX_LENGTH, action: "turbo:click->frame-scroll#remember turbo:frame-render->frame-scroll#restore" } do %>
     <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
       <p class="text-sm font-medium text-base-content/70"><%= range_heading %></p>
       <nav class="tabs tabs-box tabs-sm" aria-label="Time range">
@@ -103,7 +103,24 @@
                         </button>
                         <span class="truncate">· <%= account.name %><%= " •••• #{account.mask}" if account.mask.present? %></span>
                       </div>
+                      <% if transaction.note %>
+                        <p class="mt-1 flex items-start gap-1.5 text-xs text-base-content/80">
+                          <svg class="mt-px size-3.5 shrink-0 text-base-content/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v12H8l-4 4z"/></svg>
+                          <span class="line-clamp-2 break-words"><span class="sr-only">Note: </span><%= transaction.note %></span>
+                        </p>
+                      <% end %>
                     </div>
+                    <button type="button"
+                            class="<%= class_names("btn btn-ghost btn-square btn-sm shrink-0", transaction.note ? "text-base-content" : "text-base-content/40 hover:text-base-content") %>"
+                            aria-label="<%= transaction.note ? "Edit note" : "Add a note" %> for <%= transaction.merchant_name.presence || transaction.description %>"
+                            title="<%= transaction.note ? "Edit note" : "Add a note" %>"
+                            data-action="transaction-note#open"
+                            data-transaction-note-url-param="<%= transaction_path(transaction) %>"
+                            data-transaction-note-merchant-param="<%= transaction.merchant_name.presence || transaction.description %>"
+                            data-transaction-note-amount-param="<%= number_to_currency(transaction.amount.abs) %>"
+                            data-transaction-note-note-param="<%= transaction.note %>">
+                      <svg class="size-4" viewBox="0 0 24 24" fill="<%= transaction.note ? "currentColor" : "none" %>" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v12H8l-4 4z"/></svg>
+                    </button>
                     <p class="flex-none font-semibold tabular-nums">
                       <% if transaction.amount.negative? %>+<%= number_to_currency(transaction.amount.abs) %><% else %><%= number_to_currency(transaction.amount) %><% end %>
                     </p>
@@ -164,6 +181,35 @@
           <div class="modal-action mt-4">
             <button type="button" class="btn" data-action="recategorize#close">Cancel</button>
           </div>
+        </div>
+        <form method="dialog" class="modal-backdrop"><button aria-label="Close">close</button></form>
+      </dialog>
+
+      <%# One shared note editor; each transaction's note button fills it in. %>
+      <dialog class="modal modal-bottom sm:modal-middle" aria-labelledby="note-heading" data-transaction-note-target="dialog">
+        <div class="modal-box">
+          <h3 id="note-heading" class="text-lg font-bold tracking-tight">Note</h3>
+          <p class="mt-1 text-sm text-base-content/60">
+            <span data-transaction-note-target="merchant"></span> · <span class="tabular-nums" data-transaction-note-target="amount"></span>
+          </p>
+
+          <%= form_with url: transactions_path, method: :patch, data: { transaction_note_target: "form" } do %>
+            <input type="hidden" name="return_to" data-transaction-note-target="returnTo">
+            <label for="transaction-note-field" class="sr-only">Note</label>
+            <textarea id="transaction-note-field" name="note" rows="3" maxlength="<%= Transaction::NOTE_MAX_LENGTH %>"
+                      class="textarea mt-4 w-full text-base" placeholder="e.g. Groceries for the week, split with Sam"
+                      data-transaction-note-target="field" data-action="input->transaction-note#count keydown->transaction-note#submitOnShortcut"></textarea>
+            <div class="mt-1 flex justify-between gap-3 text-xs text-base-content/60">
+              <span>Only you can see notes.</span>
+              <span class="tabular-nums" data-transaction-note-target="count"></span>
+            </div>
+
+            <div class="modal-action mt-5">
+              <button type="button" class="btn btn-ghost mr-auto text-error" data-transaction-note-target="remove" data-action="transaction-note#remove" hidden>Remove note</button>
+              <button type="button" class="btn" data-action="transaction-note#close">Cancel</button>
+              <button type="submit" class="btn btn-primary">Save note</button>
+            </div>
+          <% end %>
         </div>
         <form method="dialog" class="modal-backdrop"><button aria-label="Close">close</button></form>
       </dialog>
