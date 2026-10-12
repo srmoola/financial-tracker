@@ -35,6 +35,8 @@ RSpec.describe "Pages", type: :request do
 
     expect(response.body).to include("$1,000.00", "Plaid Checking", "First Platypus Bank", "Net worth over time", "+$100.00")
     expect(response.body).not_to include("Sample data", "Link your real accounts", "Roth IRA")
+    # With a history to chart, it comes before the breakdown.
+    expect(response.body.index('id="net-worth-history-heading"')).to be < response.body.index('id="net-worth-heading"')
   end
 
   it "says history starts today when there's only one day of snapshots" do
@@ -46,6 +48,7 @@ RSpec.describe "Pages", type: :request do
     get root_path
 
     expect(response.body).to include("Your history starts today")
+    expect(response.body.index('id="net-worth-heading"')).to be < response.body.index('id="net-worth-history-heading"')
   end
 
   it "prompts users without connected accounts to link them" do

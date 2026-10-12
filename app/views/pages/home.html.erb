@@ -12,12 +12,13 @@
   </section>
 <% end %>
 
-<div class="<%= class_names("mt-6": @sample) %>">
+<%# Net worth over time leads once there's a history to chart; until then, the breakdown does. %>
+<% has_history = @history.points.size >= 2 %>
+<% breakdown = capture do %>
   <%= render "net_worth", breakdown: @breakdown, sample: @sample %>
-</div>
-
-<div class="mt-8">
-  <% if @history.points.size >= 2 %>
+<% end %>
+<% history = capture do %>
+  <% if has_history %>
     <%= render "net_worth_history", history: @history, range: @range, view: @view %>
   <% else %>
     <section aria-labelledby="net-worth-history-heading">
@@ -30,6 +31,14 @@
       </div>
     </section>
   <% end %>
+<% end %>
+
+<div class="<%= class_names("mt-6": @sample) %>">
+  <%= has_history ? history : breakdown %>
+</div>
+
+<div class="mt-8">
+  <%= has_history ? breakdown : history %>
 </div>
 
 <div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

@@ -8,7 +8,10 @@
 </section>
 
 <section class="mt-10" aria-labelledby="connected-heading">
-  <h2 id="connected-heading" class="text-lg font-bold tracking-tight">Connected</h2>
+  <div class="flex flex-wrap items-baseline justify-between gap-2">
+    <h2 id="connected-heading" class="text-lg font-bold tracking-tight">Connected</h2>
+    <%= link_to "Daily sync history", sync_history_path, class: "text-sm font-medium text-base-content/70 hover:text-base-content hover:underline" %>
+  </div>
 
   <% if @plaid_items.empty? %>
     <div class="card mt-3 border border-dashed border-base-300 bg-base-100">

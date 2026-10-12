@@ -3,6 +3,6 @@ class SyncAllPlaidItemsJob < ApplicationJob
   queue_as :default
 
   def perform
-    PlaidItem.find_each { |plaid_item| SyncPlaidItemJob.perform_later(plaid_item) }
+    PlaidItem.find_each { |plaid_item| SyncPlaidItemJob.perform_later(plaid_item, daily: true) }
   end
 end

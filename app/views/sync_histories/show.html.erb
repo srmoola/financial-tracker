@@ -1,0 +1,58 @@
+<% content_for :title, "Daily sync history · Financial Tracker" %>
+
+<%= link_to accounts_path, class: "inline-flex items-center gap-1 text-sm font-medium text-base-content/70 hover:text-base-content" do %>
+  <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
+  Accounts
+<% end %>
+<h1 class="mt-2 text-3xl font-bold tracking-tight">Daily sync history</h1>
+<p class="mt-1 text-base-content/70">Every day at 6:00 AM UTC, balances and transactions are refreshed for all your connections.</p>
+
+<section class="card mt-8 border border-base-300 bg-base-100" aria-label="Last 30 days">
+  <% if @days.empty? %>
+    <div class="card-body items-center p-10 text-center">
+      <p class="font-semibold">No daily syncs yet</p>
+      <p class="text-sm text-base-content/60">The first one runs at 6:00 AM UTC after you connect an account.</p>
+    </div>
+  <% else %>
+    <ul class="divide-y divide-base-300">
+      <% @days.each do |day| %>
+        <li class="flex items-start gap-4 px-6 py-4 sm:px-8">
+          <% case day.status %>
+          <% when :succeeded %>
+            <span class="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-success/15 text-success" aria-hidden="true">
+              <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>
+            </span>
+          <% when :failed %>
+            <span class="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-error/15 text-error" aria-hidden="true">
+              <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+            </span>
+          <% else %>
+            <span class="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-base-200 text-base-content/50" aria-hidden="true">
+              <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M7 12h10"/></svg>
+            </span>
+          <% end %>
+          <div class="min-w-0 flex-1">
+            <p class="whitespace-nowrap font-medium"><%= day.date == Date.current ? "Today" : day.date.strftime("%a, %b %-d") %></p>
+            <% if day.status == :failed %>
+              <ul class="mt-1 text-sm text-base-content/70">
+                <% day.failures.each do |failure| %>
+                  <li><%= failure.plaid_item.institution_name.presence || "A connection" %> <span class="font-mono text-xs text-base-content/60"><%= failure.error %></span></li>
+                <% end %>
+              </ul>
+            <% end %>
+          </div>
+          <div class="shrink-0 text-right">
+            <p class="<%= class_names("text-sm font-semibold", "text-success": day.status == :succeeded, "text-error": day.status == :failed, "text-base-content/60": day.status.in?(%i[ missed pending ])) %>">
+              <%= { succeeded: "Synced", failed: "Failed", missed: "Didn't run", pending: "Not run yet" }.fetch(day.status) %>
+            </p>
+            <% if day.ran_at %>
+              <p class="text-xs text-base-content/60">
+                <%= day.status == :failed ? "#{day.failures.size} of #{pluralize(day.bank_count, "connection")}" : pluralize(day.bank_count, "connection") %> · <%= day.ran_at.utc.strftime("%-l:%M %p UTC") %>
+              </p>
+            <% end %>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+</section>
