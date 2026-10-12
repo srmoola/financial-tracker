@@ -2,6 +2,9 @@ import { Controller } from "@hotwired/stimulus"
 
 // Crosshair and tooltip for a line chart. Snaps to the day nearest the pointer;
 // with the chart focused, the arrow keys (and Home/End) move between days.
+// On touch screens, sliding a finger across the chart moves the reading (the
+// plot only lets the browser scroll vertically), and the reading stays after
+// the finger lifts until the next tap elsewhere.
 // The tooltip's first row is the headline value; the rest are its breakdown.
 // Charts with details (a <template> per point) open them in a second box,
 // beside the tooltip, when a point is clicked or with Enter; clicking (or
@@ -49,9 +52,16 @@ export default class extends Controller {
     this.#show(Math.min(Math.max(moves[event.key], 0), this.#lastIndex))
   }
 
-  hide() {
+  hide(event) {
+    if (event?.pointerType === "touch") return // a finger lifting off keeps its reading
+
     this.index = undefined
     this.#markers.forEach((element) => (element.hidden = true))
+  }
+
+  // A tap anywhere else clears the reading a finger left behind.
+  dismiss(event) {
+    if (this.index !== undefined && !this.plotTarget.contains(event.target)) this.hide()
   }
 
   #show(index) {

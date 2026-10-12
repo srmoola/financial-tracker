@@ -5,7 +5,7 @@
     `details_hint` says so in the tooltip. %>
 <div class="<%= class_names("grid grid-cols-[3rem_1fr] gap-x-3", "sm:mr-24": chart.lines.size > 1) %>"
      data-controller="line-chart" data-line-chart-points-value="<%= chart.hover.to_json %>"
-     <% if details %>data-action="click@window->line-chart#closeOutside keydown.esc@window->line-chart#close"<% end %>>
+     data-action="pointerdown@window->line-chart#dismiss<%= " click@window->line-chart#closeOutside keydown.esc@window->line-chart#close" if details %>">
   <div class="relative h-64" aria-hidden="true">
     <% chart.y_ticks.each do |tick| %>
       <span class="absolute right-0 -translate-y-1/2 text-xs tabular-nums text-base-content/60" style="top: <%= tick.position %>%"><%= tick.label %></span>
@@ -13,11 +13,11 @@
   </div>
 
   <div class="relative">
-    <div class="<%= class_names("relative h-64 rounded-sm outline-offset-4 focus-visible:outline-2 focus-visible:outline-secondary", details ? "cursor-pointer" : "cursor-crosshair") %>"
+    <div class="<%= class_names("relative h-64 touch-pan-y select-none rounded-sm outline-offset-4 focus-visible:outline-2 focus-visible:outline-secondary", details ? "cursor-pointer" : "cursor-crosshair") %>"
          tabindex="0" role="img"
          aria-label="<%= aria_label %>"
          data-line-chart-target="plot"
-         data-action="pointermove->line-chart#move pointerleave->line-chart#hide focus->line-chart#focus blur->line-chart#hide keydown->line-chart#key<%= " click->line-chart#toggle" if details %>">
+         data-action="pointerdown->line-chart#move pointermove->line-chart#move pointerleave->line-chart#hide focus->line-chart#focus blur->line-chart#hide keydown->line-chart#key<%= " click->line-chart#toggle" if details %>">
       <% chart.y_ticks.each do |tick| %>
         <div class="absolute inset-x-0 border-t border-base-300" style="top: <%= tick.position %>%" aria-hidden="true"></div>
       <% end %>

@@ -117,4 +117,26 @@ RSpec.describe "Pages", type: :request do
     expect(response).to have_http_status(:success)
     expect(response.body).not_to include("Empty Checking", "Sample data", "Link your real accounts")
   end
+
+  it "has a full-screen menu for small screens, marking the current page" do
+    sign_in_as users(:one)
+
+    get root_path
+
+    expect(response.body).to include('aria-label="Open menu"', '<dialog class="m-0 h-dvh', 'aria-label="Close menu"')
+    menu = response.body[%r{<dialog[^>]*aria-label="Menu".*?</dialog>}m]
+    expect(menu).to include("Overview", "Accounts", "Transactions", "Budgets", "Subscriptions", "Taxes", "Log out")
+    expect(menu).to match(%r{<a [^>]*aria-current="page"[^>]*href="/">Overview</a>})
+  end
+
+  it "lets a finger slide across the net worth chart without scrolling the page sideways" do
+    sign_in_as users(:one)
+    item = users(:one).plaid_items.create!(item_id: "item-1", access_token: "token")
+    account = item.accounts.create!(plaid_account_id: "acc-1", name: "Plaid Checking", account_type: "depository", subtype: "checking", current_balance: 100)
+    [ 1.day.ago.to_date, Date.current ].each { |date| account.balance_snapshots.create!(date:, balance: 100) }
+
+    get root_path
+
+    expect(response.body).to include("touch-pan-y", "pointerdown->line-chart#move", "pointerdown@window->line-chart#dismiss")
+  end
 end
