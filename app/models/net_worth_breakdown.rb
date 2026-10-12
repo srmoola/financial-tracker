@@ -11,7 +11,7 @@ class NetWorthBreakdown
   attr_reader :groups, :debts
 
   def initialize(accounts)
-    by_group = accounts.group_by { |account| group_for(account) }
+    by_group = accounts.group_by { |account| self.class.group_for(account) }
     @groups = GROUPS.filter_map do |key, label|
       Group.new(key:, label:, accounts: by_group[key]) if by_group[key]
     end
@@ -23,15 +23,15 @@ class NetWorthBreakdown
   def net_worth = assets_total - debts_total
   def asset_account_count = groups.sum { |group| group.accounts.size }
 
-  private
-    # Raises for account types we don't handle yet (e.g. loans), rather than
-    # silently leaving them out of net worth.
-    def group_for(account)
-      case [ account.account_type, account.subtype ]
-      in [ "depository", "checking" ] then :checking
-      in [ "depository", _ ] then :savings
-      in [ "investment", _ ] then :investments
-      in [ "credit", _ ] then :debts
-      end
+  # The group an account belongs to (:checking, :savings, :investments or :debts).
+  # Raises for account types we don't handle yet (e.g. loans), rather than
+  # silently leaving them out of net worth.
+  def self.group_for(account)
+    case [ account.account_type, account.subtype ]
+    in [ "depository", "checking" ] then :checking
+    in [ "depository", _ ] then :savings
+    in [ "investment", _ ] then :investments
+    in [ "credit", _ ] then :debts
     end
+  end
 end
