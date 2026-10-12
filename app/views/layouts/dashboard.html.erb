@@ -25,17 +25,15 @@
         <div class="px-2"><%= render "shared/logo" %></div>
 
         <ul class="menu mt-8 w-full gap-1 p-0">
-          <li>
-            <%= link_to root_path, class: class_names("rounded-lg font-medium", "bg-base-200 font-semibold": current_page?(root_path)) do %>
-              <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <rect x="3" y="3" width="7" height="9" rx="1.5" />
-                <rect x="14" y="3" width="7" height="5" rx="1.5" />
-                <rect x="14" y="12" width="7" height="9" rx="1.5" />
-                <rect x="3" y="16" width="7" height="5" rx="1.5" />
-              </svg>
-              Overview
-            <% end %>
-          </li>
+          <% nav_items.each do |item| %>
+            <% path = public_send(item.path_helper) %>
+            <li>
+              <%= link_to path, class: class_names("rounded-lg font-medium", "bg-base-200 font-semibold": current_page?(path)) do %>
+                <%= nav_icon(item) %>
+                <%= item.label %>
+              <% end %>
+            </li>
+          <% end %>
         </ul>
 
         <div class="mt-auto border-t border-base-300 pt-4">

@@ -1,0 +1,143 @@
+<%# locals: (history:, range:, view:) %>
+<% points = history.points %>
+<% categories = NetWorthBreakdown::GROUPS %>
+<% colors = DonutChartHelper::CATEGORY_COLORS %>
+<% series =
+     if view == "categories"
+       categories.map { |key, label| LineChartHelper::Series.new(key:, label:, color: colors.fetch(key), values: points.map { |point| point.categories[key].to_f }) }
+     else
+       [ LineChartHelper::Series.new(key: :net_worth, label: "Net worth", color: "#111112", values: points.map { |point| point.net_worth.to_f }) ]
+     end %>
+<% tooltip_rows = points.map do |point|
+     [ [ "Net worth", number_to_currency(point.net_worth), nil ] ] +
+       categories.map { |key, label| [ label, number_to_currency(point.categories[key]), colors.fetch(key) ] } +
+       [ [ "Credit cards", "−#{number_to_currency(point.debts)}", nil ] ]
+   end %>
+<% chart = line_chart(points.map(&:date), series, tooltip_rows:) %>
+<% up = history.change >= 0 %>
+<% range_label = { "1m" => "month", "3m" => "3 months", "6m" => "6 months", "1y" => "year" }.fetch(range) %>
+<% frame_link = ->(label, active, params) { link_to label, root_path(params), class: class_names("tab", "tab-active": active), aria: { current: active || nil }, data: { turbo_frame: "net_worth_history", turbo_action: "advance" } } %>
+
+<%= turbo_frame_tag "net_worth_history", class: "block transition-opacity aria-busy:opacity-50" do %>
+  <section aria-labelledby="net-worth-history-heading">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h2 id="net-worth-history-heading" class="text-lg font-bold tracking-tight">Net worth over time</h2>
+      <div class="flex flex-wrap items-center gap-2">
+        <nav class="tabs tabs-box tabs-sm" aria-label="Chart lines">
+          <%= frame_link.("Net worth", view == "net_worth", { range:, view: "net_worth" }) %>
+          <%= frame_link.("By category", view == "categories", { range:, view: "categories" }) %>
+        </nav>
+        <nav class="tabs tabs-box tabs-sm" aria-label="Time range">
+          <% NetWorthHistory::RANGES.each_key do |key| %>
+            <%= frame_link.(key.upcase, key == range, { range: key, view: }) %>
+          <% end %>
+        </nav>
+      </div>
+    </div>
+
+    <div class="card mt-3 border border-base-300 bg-base-100">
+      <div class="card-body gap-6 p-6 sm:p-8">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <svg class="size-4 <%= up ? "text-success" : "text-error" %>" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="<%= up ? "M12 19V5M5 12l7-7 7 7" : "M12 5v14M19 12l-7 7-7-7" %>" />
+            </svg>
+            <span class="font-semibold tabular-nums">
+              <%= up ? "+" : "−" %><%= number_to_currency(history.change.abs) %>
+              (<%= up ? "+" : "−" %><%= number_to_percentage(history.change_percent.abs, precision: 1) %>)
+            </span>
+            <span class="text-sm text-base-content/60">net worth over the last <%= range_label %></span>
+          </div>
+
+          <% if chart.lines.size > 1 %>
+            <ul class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm" aria-label="Legend">
+              <% chart.lines.each do |line| %>
+                <li class="flex items-center gap-2">
+                  <span class="h-0.5 w-4 rounded-full" style="background-color: <%= line.color %>" aria-hidden="true"></span>
+                  <%= line.label %>
+                </li>
+              <% end %>
+            </ul>
+          <% end %>
+        </div>
+
+        <div class="<%= class_names("grid grid-cols-[3rem_1fr] gap-x-3", "sm:mr-24": chart.lines.size > 1) %>"
+             data-controller="line-chart" data-line-chart-points-value="<%= chart.hover.to_json %>">
+          <div class="relative h-64" aria-hidden="true">
+            <% chart.y_ticks.each do |tick| %>
+              <span class="absolute right-0 -translate-y-1/2 text-xs tabular-nums text-base-content/60" style="top: <%= tick.position %>%"><%= tick.label %></span>
+            <% end %>
+          </div>
+
+          <div class="relative h-64 cursor-crosshair rounded-sm outline-offset-4 focus-visible:outline-2 focus-visible:outline-secondary"
+               tabindex="0" role="img"
+               aria-label="Net worth from <%= points.first.date.strftime("%b %-d, %Y") %> (<%= number_to_currency(points.first.net_worth) %>) to <%= points.last.date.strftime("%b %-d, %Y") %> (<%= number_to_currency(points.last.net_worth) %>). Use the left and right arrow keys to read daily values."
+               data-line-chart-target="plot"
+               data-action="pointermove->line-chart#move pointerleave->line-chart#hide focus->line-chart#focus blur->line-chart#hide keydown->line-chart#key">
+            <% chart.y_ticks.each do |tick| %>
+              <div class="absolute inset-x-0 border-t border-base-300" style="top: <%= tick.position %>%" aria-hidden="true"></div>
+            <% end %>
+
+            <svg class="absolute inset-0 size-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              <% chart.lines.each do |line| %>
+                <polyline points="<%= line.points %>" fill="none" stroke="<%= line.color %>" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" />
+              <% end %>
+            </svg>
+
+            <% chart.lines.each do |line| %>
+              <span class="absolute left-full size-2.5 -translate-1/2 rounded-full ring-2 ring-base-100" style="top: <%= line.end_y %>%; background-color: <%= line.color %>" aria-hidden="true"></span>
+            <% end %>
+
+            <% if chart.lines.size > 1 %>
+              <% end_label_positions(chart.lines).each do |line, position| %>
+                <span class="absolute left-full ml-3 -translate-y-1/2 whitespace-nowrap text-xs font-medium max-sm:hidden" style="top: <%= position %>%" aria-hidden="true"><%= line.label %></span>
+              <% end %>
+            <% end %>
+
+            <div class="pointer-events-none absolute inset-y-0 w-px bg-base-content/30" data-line-chart-target="crosshair" hidden></div>
+            <% chart.lines.each do |line| %>
+              <span class="pointer-events-none absolute size-3 -translate-1/2 rounded-full ring-2 ring-base-100" style="background-color: <%= line.color %>" data-line-chart-target="dot" hidden></span>
+            <% end %>
+            <div class="pointer-events-none absolute top-0 z-10 w-52 rounded-box border border-base-300 bg-base-100 px-3 py-2 shadow-lg shadow-black/5"
+                 data-line-chart-target="tooltip" aria-live="polite" hidden>
+              <p class="text-xs text-base-content/60" data-line-chart-target="date"></p>
+              <div class="mt-1 flex flex-col gap-1" data-line-chart-target="rows"></div>
+            </div>
+          </div>
+
+          <div></div>
+          <div class="relative mt-2 h-4" aria-hidden="true">
+            <% chart.x_ticks.each_with_index do |tick, index| %>
+              <span class="<%= class_names("absolute -translate-x-1/2 text-xs text-base-content/60", "max-sm:hidden": chart.x_ticks.size > 6 && index.odd?) %>" style="left: <%= tick.position %>%"><%= tick.label %></span>
+            <% end %>
+          </div>
+        </div>
+
+        <%# sr-only goes on a wrapper: a table can't shrink to 1px, so it would still widen the page. %>
+        <div class="sr-only">
+          <table>
+            <caption>Net worth and category totals on the first of each month</caption>
+            <thead>
+              <tr>
+                <th scope="col">Date</th>
+                <th scope="col">Net worth</th>
+                <% categories.each_value do |label| %><th scope="col"><%= label %></th><% end %>
+                <th scope="col">Credit cards</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% points.select { |point| point.date.day == 1 || point == points.last }.each do |point| %>
+                <tr>
+                  <td><%= point.date.strftime("%b %-d, %Y") %></td>
+                  <td><%= number_to_currency(point.net_worth) %></td>
+                  <% categories.each_key do |key| %><td><%= number_to_currency(point.categories[key]) %></td><% end %>
+                  <td>−<%= number_to_currency(point.debts) %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+<% end %>

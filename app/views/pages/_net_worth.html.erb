@@ -1,0 +1,100 @@
+<%# locals: (breakdown:) %>
+<% groups = breakdown.groups %>
+<% segments = donut_segments(groups.map { |group| group.total.to_f },
+                             colors: groups.map { |group| DonutChartHelper::CATEGORY_COLORS.fetch(group.key) }, radius: 80) %>
+<% net_worth_label = number_to_currency(breakdown.net_worth) %>
+
+<section class="card border border-base-300 bg-base-100" data-controller="donut" aria-labelledby="net-worth-heading">
+  <div class="card-body gap-6 p-6 sm:p-8">
+    <div class="flex items-center justify-between gap-4">
+      <h2 id="net-worth-heading" class="text-lg font-bold tracking-tight">Net worth</h2>
+      <span class="badge badge-soft badge-secondary">Sample data</span>
+    </div>
+
+    <div class="flex flex-col items-center gap-10">
+      <div class="relative size-72 sm:size-96">
+        <svg viewBox="0 0 200 200" class="size-full" role="img"
+             aria-label="<%= "Net worth #{net_worth_label}. Assets by category: " + groups.zip(segments).map { |group, segment| "#{group.label} #{number_to_currency(group.total)} (#{number_to_percentage(segment.share * 100, precision: 0)})" }.join(", ") %>">
+          <g transform="rotate(-90 100 100)">
+            <% groups.zip(segments).each_with_index do |(group, segment), index| %>
+              <g class="cursor-pointer outline-none transition-opacity duration-150" tabindex="0"
+                 aria-label="<%= group.label %>: <%= number_to_currency(group.total) %>"
+                 data-donut-target="segment"
+                 data-action="mouseenter->donut#show focus->donut#show mouseleave->donut#reset blur->donut#reset"
+                 data-donut-index-param="<%= index %>">
+                <circle cx="100" cy="100" r="80" fill="none" stroke="<%= segment.color %>" stroke-width="24"
+                        stroke-dasharray="<%= segment.dasharray %>" stroke-dashoffset="<%= segment.dashoffset %>" />
+                <%# Wider, invisible hit area so slices are easy to hover %>
+                <circle cx="100" cy="100" r="80" fill="none" stroke="transparent" stroke-width="44"
+                        stroke-dasharray="<%= segment.dasharray %>" stroke-dashoffset="<%= segment.dashoffset %>" />
+              </g>
+            <% end %>
+          </g>
+        </svg>
+
+        <div class="pointer-events-none absolute inset-0 grid place-items-center text-center" aria-live="polite">
+          <div class="max-w-44 sm:max-w-56">
+            <p class="text-sm font-medium text-base-content/60" data-donut-target="label">Net worth</p>
+            <p class="mt-1 text-3xl font-bold tracking-tight sm:text-4xl" data-donut-target="value"><%= net_worth_label %></p>
+            <p class="mt-1 text-sm text-base-content/60" data-donut-target="detail"><%= pluralize(breakdown.asset_account_count, "account") %></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex w-full max-w-2xl flex-col gap-3">
+        <% groups.zip(segments).each_with_index do |(group, segment), index| %>
+          <% share = number_to_percentage(segment.share * 100, precision: 1) %>
+          <div class="overflow-hidden rounded-box border border-base-300">
+            <div class="flex cursor-default items-center gap-3 px-4 py-3 transition-colors"
+                 data-donut-target="item"
+                 data-action="mouseenter->donut#show mouseleave->donut#reset"
+                 data-donut-index-param="<%= index %>"
+                 data-label="<%= group.label %>"
+                 data-value="<%= number_to_currency(group.total) %>"
+                 data-detail="<%= pluralize(group.accounts.size, "account") %> · <%= share %> of assets">
+              <span class="size-3 shrink-0 rounded-sm" style="background-color: <%= segment.color %>" aria-hidden="true"></span>
+              <div class="min-w-0 flex-1">
+                <h3 class="font-semibold"><%= group.label %></h3>
+                <p class="text-xs text-base-content/60"><%= pluralize(group.accounts.size, "account") %></p>
+              </div>
+              <div class="text-right">
+                <p class="font-semibold tabular-nums"><%= number_to_currency(group.total) %></p>
+                <p class="text-xs tabular-nums text-base-content/60"><%= share %></p>
+              </div>
+            </div>
+            <%= render "net_worth_accounts", accounts: group.accounts %>
+          </div>
+        <% end %>
+
+        <% if breakdown.debts.any? %>
+          <div class="overflow-hidden rounded-box border border-base-300">
+            <div class="flex items-center gap-3 px-4 py-3">
+              <span class="size-3 shrink-0 rounded-sm border border-base-content/30" aria-hidden="true"></span>
+              <div class="min-w-0 flex-1">
+                <h3 class="font-semibold">Credit cards</h3>
+                <p class="text-xs text-base-content/60"><%= pluralize(breakdown.debts.size, "account") %> · subtracted from net worth</p>
+              </div>
+              <p class="flex-none font-semibold tabular-nums">−<%= number_to_currency(breakdown.debts_total) %></p>
+            </div>
+            <%= render "net_worth_accounts", accounts: breakdown.debts, owed: true %>
+          </div>
+        <% end %>
+
+        <dl class="grid grid-cols-3 gap-2 rounded-box bg-base-200 p-4 text-center">
+          <div>
+            <dt class="text-xs text-base-content/60">Assets</dt>
+            <dd class="font-semibold tabular-nums"><%= number_to_currency(breakdown.assets_total) %></dd>
+          </div>
+          <div>
+            <dt class="text-xs text-base-content/60">Debts</dt>
+            <dd class="font-semibold tabular-nums">−<%= number_to_currency(breakdown.debts_total) %></dd>
+          </div>
+          <div>
+            <dt class="text-xs text-base-content/60">Net worth</dt>
+            <dd class="font-bold tabular-nums"><%= net_worth_label %></dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+  </div>
+</section>

@@ -1,36 +1,32 @@
 <% content_for :title, "Overview · Financial Tracker" %>
 
-<div class="flex flex-col gap-1">
-  <h1 class="text-3xl font-bold tracking-tight">Welcome back, <%= Current.user.first_name %></h1>
-  <p class="text-base-content/70">Here's an overview of your finances.</p>
+<div role="alert" class="alert alert-info alert-soft">
+  <span>You're looking at sample data. Your real accounts will show up here once you connect them.</span>
 </div>
 
-<div class="mt-8 grid gap-4 sm:grid-cols-3">
-  <% [ [ "Net worth", "Across all accounts" ], [ "Cash", "Checking and savings" ], [ "Spent this month", "All categories" ] ].each do |label, hint| %>
-    <div class="card border border-base-300 bg-base-100">
-      <div class="card-body gap-1 p-6">
-        <p class="text-sm font-medium text-base-content/70"><%= label %></p>
-        <p class="text-3xl font-bold tracking-tight">$0.00</p>
-        <p class="text-xs text-base-content/50"><%= hint %></p>
+<div class="mt-6">
+  <%= render "net_worth", breakdown: NetWorthBreakdown.new(SampleData::ACCOUNTS) %>
+</div>
+
+<div class="mt-8">
+  <%= render "net_worth_history", history: @history, range: @range, view: @view %>
+</div>
+
+<div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+  <% SampleData::HIGHLIGHTS.each do |highlight| %>
+    <% item = nav_item(highlight.section) %>
+    <%= link_to public_send(item.path_helper), class: "card group border border-base-300 bg-base-100 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/5" do %>
+      <div class="card-body gap-3 p-6">
+        <div class="flex items-center justify-between">
+          <div class="grid size-10 place-items-center rounded-xl bg-base-200"><%= nav_icon(item) %></div>
+          <svg class="size-5 text-base-content/40 transition group-hover:translate-x-0.5 group-hover:text-base-content" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </div>
+        <div>
+          <h3 class="font-semibold"><%= item.label %></h3>
+          <p class="mt-2 text-2xl font-bold tracking-tight"><%= highlight.stat %></p>
+          <p class="text-sm text-base-content/60"><%= highlight.detail %></p>
+        </div>
       </div>
-    </div>
+    <% end %>
   <% end %>
-</div>
-
-<div class="card mt-6 overflow-hidden border border-base-300 bg-base-100">
-  <div class="card-body items-center gap-4 p-10 text-center sm:p-14">
-    <div class="grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-mint to-sky">
-      <svg class="size-7 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M3 10h18" />
-        <path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8" />
-        <path d="M3 21h18" />
-        <path d="M12 3 3 8h18z" />
-      </svg>
-    </div>
-    <div>
-      <h2 class="text-xl font-bold tracking-tight">Connect your first account</h2>
-      <p class="mt-1 max-w-md text-base-content/70">Link a bank, card or investment account to see your balances and transactions in one place.</p>
-    </div>
-    <span class="badge badge-soft badge-secondary">Coming soon</span>
-  </div>
 </div>
