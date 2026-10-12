@@ -9,8 +9,8 @@
       <span class="badge badge-soft badge-secondary">Sample data</span>
     </div>
 
-    <div class="grid items-center gap-8 lg:grid-cols-[18rem_1fr]">
-      <div class="relative mx-auto size-64 sm:size-72">
+    <div class="flex flex-col items-center gap-10">
+      <div class="relative size-72 sm:size-96">
         <svg viewBox="0 0 200 200" class="size-full" role="img"
              aria-label="<%= "Net worth #{net_worth_label}. Assets by account: " + assets.zip(segments).map { |account, segment| "#{account.name} #{number_to_currency(account.balance)} (#{number_to_percentage(segment.share * 100, precision: 0)})" }.join(", ") %>">
           <g transform="rotate(-90 100 100)">
@@ -32,15 +32,15 @@
         </svg>
 
         <div class="pointer-events-none absolute inset-0 grid place-items-center text-center" aria-live="polite">
-          <div class="max-w-40">
-            <p class="text-xs font-medium text-base-content/60" data-donut-target="label">Net worth</p>
-            <p class="mt-1 text-2xl font-bold tracking-tight sm:text-3xl" data-donut-target="value"><%= net_worth_label %></p>
-            <p class="mt-1 text-xs text-base-content/60" data-donut-target="detail"><%= assets.size %> accounts</p>
+          <div class="max-w-56">
+            <p class="text-sm font-medium text-base-content/60" data-donut-target="label">Net worth</p>
+            <p class="mt-1 text-3xl font-bold tracking-tight sm:text-4xl" data-donut-target="value"><%= net_worth_label %></p>
+            <p class="mt-1 text-sm text-base-content/60" data-donut-target="detail"><%= assets.size %> accounts</p>
           </div>
         </div>
       </div>
 
-      <div>
+      <div class="w-full max-w-2xl">
         <ul class="flex flex-col">
           <% assets.zip(segments).each_with_index do |(account, segment), index| %>
             <li class="flex cursor-default items-center gap-3 rounded-lg px-3 py-2.5 transition-colors"
