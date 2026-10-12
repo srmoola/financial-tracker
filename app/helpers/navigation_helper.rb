@@ -5,6 +5,8 @@ module NavigationHelper
   NAV_ITEMS = [
     NavItem.new(key: :overview, label: "Overview", path_helper: :root_path,
       icon: '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>'),
+    NavItem.new(key: :accounts, label: "Accounts", path_helper: :accounts_path,
+      icon: '<path d="M3 10h18"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/><path d="M3 21h18"/><path d="M12 3 3 8h18z"/>'),
     NavItem.new(key: :transactions, label: "Transactions", path_helper: :transactions_path,
       icon: '<path d="M7 7h13M16 3l4 4-4 4"/><path d="M17 17H4M8 13l-4 4 4 4"/>'),
     NavItem.new(key: :budgets, label: "Budgets", path_helper: :budgets_path,

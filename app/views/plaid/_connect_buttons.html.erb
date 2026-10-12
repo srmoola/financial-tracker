@@ -1,0 +1,24 @@
+<%# locals: (from:, stacked: false) %>
+<%# Two ways into Plaid Link: banks/credit cards, or investment accounts. %>
+<div data-controller="plaid-link" data-plaid-link-from-value="<%= from %>">
+  <div class="<%= class_names("grid gap-3", "sm:grid-cols-2": !stacked) %>">
+    <% [ [ "bank", "Bank or credit card", "Checking, savings and credit cards",
+           '<path d="M3 10h18"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/><path d="M3 21h18"/><path d="M12 3 3 8h18z"/>' ],
+         [ "investment", "Investment account", "Brokerage, retirement and HSA",
+           '<path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/>' ] ].each do |kind, title, detail, icon| %>
+      <button type="button"
+              class="group flex w-full cursor-pointer items-center gap-4 rounded-box border border-base-300 bg-base-100 p-4 text-left transition hover:border-base-content/30 hover:shadow-md hover:shadow-black/5 disabled:cursor-wait disabled:opacity-60"
+              data-plaid-link-target="button" data-action="plaid-link#open" data-plaid-link-kind-param="<%= kind %>">
+        <span class="grid size-11 shrink-0 place-items-center rounded-xl bg-base-200">
+          <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><%= icon.html_safe %></svg>
+        </span>
+        <span class="min-w-0 flex-1">
+          <span class="block font-semibold"><%= title %></span>
+          <span class="block text-sm text-base-content/60"><%= detail %></span>
+        </span>
+        <svg class="size-5 text-base-content/40 transition group-hover:translate-x-0.5 group-hover:text-base-content" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+    <% end %>
+  </div>
+  <p role="alert" class="mt-3 text-sm text-error" data-plaid-link-target="error" hidden></p>
+</div>

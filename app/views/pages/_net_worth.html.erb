@@ -1,4 +1,4 @@
-<%# locals: (breakdown:) %>
+<%# locals: (breakdown:, sample: false) %>
 <% groups = breakdown.groups %>
 <% segments = donut_segments(groups.map { |group| group.total.to_f },
                              colors: groups.map { |group| DonutChartHelper::CATEGORY_COLORS.fetch(group.key) }, radius: 80) %>
@@ -8,7 +8,7 @@
   <div class="card-body gap-6 p-6 sm:p-8">
     <div class="flex items-center justify-between gap-4">
       <h2 id="net-worth-heading" class="text-lg font-bold tracking-tight">Net worth</h2>
-      <span class="badge badge-soft badge-secondary">Sample data</span>
+      <% if sample %><span class="badge badge-soft badge-secondary">Sample data</span><% end %>
     </div>
 
     <div class="flex flex-col items-center gap-10">

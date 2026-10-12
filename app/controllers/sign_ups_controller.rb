@@ -11,7 +11,7 @@ class SignUpsController < ApplicationController
     @user = User.new(sign_up_params)
     if @user.save
       start_new_session_for(@user)
-      redirect_to root_path
+      redirect_to onboarding_path
     else
       render :show, status: :unprocessable_content
     end

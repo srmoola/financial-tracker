@@ -25,7 +25,7 @@ RSpec.describe "Sign ups", type: :request do
   it "creates a user with their name and signs them in" do
     expect { sign_up }.to change(User, :count).by(1)
 
-    expect(response).to redirect_to(root_path)
+    expect(response).to redirect_to(onboarding_path)
     expect(cookies[:session_id]).to be_present
     expect(User.find_by!(email_address: "new@example.com")).to have_attributes(first_name: "Ada", last_name: "Lovelace")
   end
