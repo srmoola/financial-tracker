@@ -64,6 +64,18 @@ class PlaidItem < ApplicationRecord
     end
   end
 
+  # Stops Plaid from accessing this bank (/item/remove), then deletes the
+  # connection along with its accounts, transactions and balance history.
+  def disconnect!
+    begin
+      PlaidClient.api.item_remove(Plaid::ItemRemoveRequest.new(access_token:))
+    rescue Plaid::ApiError => error
+      raise unless PlaidClient.error_code(error) == "ITEM_NOT_FOUND" # already removed at Plaid
+    end
+
+    destroy!
+  end
+
   # Fetches accounts and their (cached, free) balances from Plaid, updates
   # them, and records the day's balance snapshot for net worth history.
   def sync_balances!(today: Date.current)

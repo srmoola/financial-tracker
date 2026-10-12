@@ -1,4 +1,5 @@
-# Saves a connection after Plaid Link succeeds, then sends the user on.
+# Plaid connections: saves one after Plaid Link succeeds, turns on statement
+# dates for one (after Link update mode), and disconnects one.
 class PlaidItemsController < ApplicationController
   def create
     plaid_item = PlaidItem.connect!(user: Current.user, public_token: params.expect(:public_token))
@@ -21,6 +22,17 @@ class PlaidItemsController < ApplicationController
   rescue Plaid::ApiError => error
     Rails.logger.error("Plaid statement dates failed: #{PlaidClient.error_code(error)}")
     render json: { error: "Couldn't turn on statement dates. Please try again." }, status: :bad_gateway
+  end
+
+  def destroy
+    plaid_item = Current.user.plaid_items.find(params[:id])
+    name = plaid_item.institution_name.presence || "the bank"
+
+    plaid_item.disconnect!
+    redirect_to accounts_path, notice: "Disconnected #{name}.", status: :see_other
+  rescue Plaid::ApiError => error
+    Rails.logger.error("Plaid disconnect failed: #{PlaidClient.error_code(error)}")
+    redirect_to accounts_path, alert: "Couldn't disconnect #{name}. Please try again.", status: :see_other
   end
 
   private

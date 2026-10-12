@@ -22,7 +22,7 @@
       <% @plaid_items.each do |plaid_item| %>
         <% institution = plaid_item.institution_name.presence || "Connected institution" %>
         <% accounts = sorted_accounts(plaid_item.accounts) %>
-        <div class="card border border-base-300 bg-base-100">
+        <div class="card border border-base-300 bg-base-100" data-controller="dialog">
           <div class="flex items-center gap-4 px-5 py-4 sm:px-6">
             <div class="grid size-11 shrink-0 place-items-center rounded-xl bg-primary text-sm font-bold text-primary-content" aria-hidden="true">
               <%= institution_initials(institution) %>
@@ -32,6 +32,7 @@
               <p class="text-xs text-base-content/60">
                 <%= pluralize(accounts.size, "account") %>
                 <% if plaid_item.last_synced_at %>· updated <%= time_ago_in_words(plaid_item.last_synced_at) %> ago<% end %>
+                · <button type="button" class="cursor-pointer font-medium text-base-content/70 hover:text-error hover:underline" data-action="dialog#open">Disconnect</button>
               </p>
             </div>
             <div class="text-right">
@@ -57,6 +58,23 @@
               </li>
             <% end %>
           </ul>
+
+          <dialog class="modal modal-bottom sm:modal-middle" aria-labelledby="disconnect-heading-<%= plaid_item.id %>" data-dialog-target="dialog">
+            <div class="modal-box">
+              <h3 id="disconnect-heading-<%= plaid_item.id %>" class="text-lg font-bold tracking-tight">Disconnect <%= institution %>?</h3>
+              <p class="mt-3 text-base-content/80">
+                This removes <%= pluralize(accounts.size, "account") %> from Financial Tracker, along with
+                <% transaction_count = Transaction.where(account: accounts).count %>
+                <%= transaction_count.positive? ? "#{pluralize(transaction_count, "transaction")}, " : "" %>your notes and category changes, and their balance history. Plaid will stop accessing <%= institution %>.
+              </p>
+              <p class="mt-3 text-sm text-base-content/60">To bring it back, connect it again from this page. Plaid counts that as a new connection.</p>
+              <div class="modal-action">
+                <button type="button" class="btn" data-action="dialog#close">Cancel</button>
+                <%= button_to "Disconnect", plaid_item_path(plaid_item), method: :delete, class: "btn btn-error" %>
+              </div>
+            </div>
+            <form method="dialog" class="modal-backdrop"><button aria-label="Close">close</button></form>
+          </dialog>
         </div>
       <% end %>
     </div>
