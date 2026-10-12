@@ -1,5 +1,7 @@
 # Credit card transactions: a spending summary and a paginated list, both for
-# the chosen time range. Clicking a spending category filters the list to it.
+# the chosen time range, and a spending chart with its own range. The list can
+# be filtered to a category (from its own menu, or a category picked on the
+# donut); the chart always shows every category.
 class TransactionsController < ApplicationController
   PER_PAGE = 25
   RANGES = { "statement" => "This month", "1m" => "1M", "3m" => "3M", "6m" => "6M", "1y" => "1Y", "all" => "All" }.freeze
@@ -7,6 +9,7 @@ class TransactionsController < ApplicationController
   # include. "all" isn't here: it has no start date.
   STATEMENTS_BACK = { "statement" => 0, "1m" => 1, "3m" => 3, "6m" => 6, "1y" => 12 }.freeze
   DEFAULT_RANGE = "statement" # each card's current statement period
+  DEFAULT_CHART_RANGE = "6m"
 
   def index
     @range = RANGES.key?(params[:range]) ? params[:range] : DEFAULT_RANGE
@@ -15,18 +18,25 @@ class TransactionsController < ApplicationController
     return if @credit_cards.empty?
 
     @statements_back = STATEMENTS_BACK[@range]
-    in_range =
-      if @statements_back
-        Transaction.in_statement_periods(@credit_cards, periods_back: @statements_back)
-      else
-        Transaction.where(account: @credit_cards)
-      end
+    in_range = transactions_in(@range)
     @earliest_date = in_range.minimum(:date) if @range == "all"
     @spending = SpendingBreakdown.new(in_range)
     @any_transactions = Transaction.where(account: @credit_cards).exists?
 
     @category = params[:category].presence
     listed = @category ? @spending.filter(in_range, @category) : in_range
+    # The list's category menu: every category in the range, plus the donut's Other if that's the filter.
+    @category_options = in_range.distinct.pluck(Arel.sql(Transaction::EFFECTIVE_CATEGORY_SQL))
+      .map { |category| [ SpendingBreakdown.label_for(category), SpendingBreakdown.param_for(category) ] }.sort
+    @category_options << [ "Other categories", "other" ] if @category == "other"
+
+    @spending_view = params[:spending_view] == "categories" ? "categories" : "total"
+    @chart_range = RANGES.key?(params[:chart_range]) ? params[:chart_range] : DEFAULT_CHART_RANGE
+    # Grouped into the donut's categories, so each category keeps its color.
+    @spending_history = SpendingHistory.new(
+      transactions_in(@chart_range).where("amount > 0"), cards: @credit_cards,
+      category_keys: @spending.categories.map(&:key) - [ :other ], periods_back: STATEMENTS_BACK[@chart_range]
+    )
 
     @total_count = listed.count
     @page_count = [ (@total_count / PER_PAGE.to_f).ceil, 1 ].max
@@ -55,6 +65,14 @@ class TransactionsController < ApplicationController
   end
 
   private
+    def transactions_in(range)
+      if (periods_back = STATEMENTS_BACK[range])
+        Transaction.in_statement_periods(@credit_cards, periods_back:)
+      else
+        Transaction.where(account: @credit_cards)
+      end
+    end
+
     # Back to the same range, filter and page the change was made from.
     def return_path
       path = params[:return_to].to_s

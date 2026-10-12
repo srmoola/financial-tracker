@@ -1,4 +1,5 @@
-<%# locals: (spending:, range:, range_text:, selected:) %>
+<%# locals: (spending:, range:, range_text:, selected:, spending_view: "total", chart_range: nil) %>
+<%# Clicking a category selects it here only; its button filters the transactions list. %>
 <% categories = spending.categories %>
 <% segments = donut_segments(categories.map { |category| category.total.to_f }, colors: spending_colors(categories), radius: 80) %>
 <% total_label = number_to_currency(spending.total) %>
@@ -9,9 +10,6 @@
   <div class="card-body gap-6 p-6 sm:p-8">
     <div>
       <h2 id="spending-heading" class="text-lg font-bold tracking-tight">Spending</h2>
-      <% if categories.any? %>
-        <p class="text-sm text-base-content/60">Click a category to see its transactions.</p>
-      <% end %>
     </div>
 
     <% if categories.empty? %>
@@ -24,7 +22,7 @@
             <g transform="rotate(-90 100 100)">
               <% categories.zip(segments).each_with_index do |(category, segment), index| %>
                 <g class="cursor-pointer outline-none transition-opacity duration-150" tabindex="0" role="button"
-                   aria-label="Show <%= category.label %> transactions (<%= number_to_currency(category.total) %>)"
+                   aria-label="Select <%= category.label %> (<%= number_to_currency(category.total) %>)"
                    data-donut-target="segment"
                    data-action="mouseenter->donut#show focus->donut#show mouseleave->donut#reset blur->donut#reset click->donut#select keydown.enter->donut#select"
                    data-donut-index-param="<%= index %>">
@@ -46,17 +44,27 @@
           </div>
         </div>
 
+        <div class="-my-4 flex min-h-9 items-center justify-center">
+          <p class="text-sm text-base-content/60" data-donut-target="prompt">Click a category to see its transactions.</p>
+          <% categories.each do |category| %>
+            <%= link_to transactions_path(range:, category: category.param, spending_view:, chart_range:), class: "btn btn-sm btn-primary", hidden: true,
+                  data: { donut_target: "action", scroll_to: "#transactions-heading" } do %>
+              See <%= category.label %> transactions
+              <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
+            <% end %>
+          <% end %>
+        </div>
+
         <ul class="grid w-full max-w-2xl gap-x-6 gap-y-1 sm:grid-cols-2">
           <% categories.zip(segments).each_with_index do |(category, segment), index| %>
             <% share = number_to_percentage(segment.share * 100, precision: 1) %>
-            <% active = category.param == selected %>
             <li>
-              <%= link_to transactions_path(range:, category: (category.param unless active)),
-                    class: class_names("flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-base-200", "ring-1 ring-base-content/20": active),
-                    aria: { current: active || nil, label: active ? "Show all categories" : "Show #{category.label} transactions" },
+              <%= tag.button type: "button",
+                    class: "flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-base-200 aria-pressed:ring-1 aria-pressed:ring-base-content/20",
+                    aria: { pressed: false, label: "Select #{category.label}" },
                     data: {
                       donut_target: "item",
-                      action: "mouseenter->donut#show mouseleave->donut#reset",
+                      action: "mouseenter->donut#show mouseleave->donut#reset click->donut#select",
                       donut_index_param: index,
                       label: category.label,
                       value: number_to_currency(category.total),

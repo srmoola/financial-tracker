@@ -10,6 +10,9 @@ RSpec.describe "Transactions page", type: :request do
     account.transactions.create!(plaid_transaction_id: SecureRandom.hex(6), amount:, date:, merchant_name: merchant, category:, pending:)
   end
 
+  # The page without the spending chart's popovers, which list purchases from the chart's own range.
+  def body_outside_chart = response.body.gsub(%r{<template data-line-chart-target="detail".*?</template>}m, "")
+
   before { sign_in_as users(:one) }
 
   it "asks to connect a credit card when there are none" do
@@ -36,7 +39,7 @@ RSpec.describe "Transactions page", type: :request do
         get transactions_path
 
         expect(response.body).to include("This month, since Sep 17", "After Statement", "$12.50")
-        expect(response.body).not_to include("Last Statement")
+        expect(body_outside_chart).not_to include("Last Statement")
       end
     end
 
@@ -49,7 +52,7 @@ RSpec.describe "Transactions page", type: :request do
         get transactions_path(range: "3m")
 
         expect(response.body).to include("Your last 3 statements and this month, since Jun 16", "Start Of Range")
-        expect(response.body).not_to include("Before Range")
+        expect(body_outside_chart).not_to include("Before Range")
       end
     end
 
@@ -77,7 +80,7 @@ RSpec.describe "Transactions page", type: :request do
         get transactions_path
 
         expect(response.body).to include("since Oct 1", "October Purchase")
-        expect(response.body).not_to include("September Purchase")
+        expect(body_outside_chart).not_to include("September Purchase")
       end
     end
 
@@ -101,10 +104,18 @@ RSpec.describe "Transactions page", type: :request do
 
     expect(response.body).to include("Spending", "$92.50", "2 purchases", "Food &amp; drink", "Travel")
     expect(response.body).to include("Coffee Shop", "Airline", "Pending", "+$200.00", "Rewards Card •••• 3333", "Showing 1–3 of 3")
-    expect(response.body).not_to include("Old Purchase")
+    expect(body_outside_chart).not_to include("Old Purchase")
 
     get transactions_path(range: "3m")
     expect(response.body).to include("Old Purchase", "$999.00")
+  end
+
+  it "shows Unknown merchant, with the masked statement text, when the card masked the description" do
+    card.transactions.create!(plaid_transaction_id: "masked-1", amount: 63.57, date: Date.current, description: "*********-********", category: "GENERAL_MERCHANDISE")
+
+    get transactions_path
+
+    expect(response.body).to include("Unknown merchant", "· *********-********")
   end
 
   describe "filtering by category" do
@@ -114,20 +125,30 @@ RSpec.describe "Transactions page", type: :request do
       add_transaction(amount: 3, merchant: "Mystery", category: nil)
     end
 
-    it "lists only that category and shows a chip to clear it" do
+    it "lists only that category, picked from the list's own menu of every category in the range" do
       get transactions_path(range: "1m", category: "TRAVEL")
 
-      expect(response.body).to include("Airline", "Clear the Travel filter", "Showing 1–1 of 1")
-      expect(response.body).not_to include("Coffee Shop", "Mystery")
-      # The donut still shows every category, and the selected one links back to all.
-      expect(response.body).to include("Food &amp; drink", 'aria-label="Show all categories"')
+      expect(response.body).to include("Airline", "Showing 1–1 of 1")
+      expect(body_outside_chart).not_to include("Coffee Shop", "Mystery")
+      expect(response.body).to include('aria-label="Filter by category"', '<option value="">All categories</option>', '<option selected="selected" value="TRAVEL">Travel</option>')
+      expect(response.body).to include('<option value="FOOD_AND_DRINK">Food &amp; drink</option>', '<option value="uncategorized">Uncategorized</option>')
+      # The donut still shows every category, with the filtered one selected.
+      expect(response.body).to include("Food &amp; drink", 'data-donut-selected-value="0"')
+    end
+
+    it "lets a category picked on the donut filter the list, through its own button" do
+      get transactions_path(range: "1m")
+
+      expect(response.body).to include("Click a category to see its transactions.")
+      expect(response.body).to match(%r{<a class="btn btn-sm btn-primary" hidden="hidden" data-donut-target="action" data-scroll-to="#transactions-heading" href="/transactions\?category=TRAVEL&amp;chart_range=6m&amp;range=1m&amp;spending_view=total">\s*See Travel transactions})
+      expect(response.body).not_to include('href="/transactions?category=TRAVEL&amp;chart_range=6m&amp;range=1m&amp;spending_view=total" aria-label') # legend rows only select
     end
 
     it "supports uncategorized transactions" do
       get transactions_path(range: "1m", category: "uncategorized")
 
       expect(response.body).to include("Mystery")
-      expect(response.body).not_to include("Coffee Shop", "Airline")
+      expect(body_outside_chart).not_to include("Coffee Shop", "Airline")
     end
 
     it "lists everything without its own slice under Other" do
@@ -138,8 +159,68 @@ RSpec.describe "Transactions page", type: :request do
       get transactions_path(range: "1m", category: "other")
 
       # Named slices: the five largest (four "Big" ones and Travel). Food and uncategorized fall into Other.
-      expect(response.body).to include("Coffee Shop", "Mystery")
-      expect(response.body).not_to include("Airline", "Big MEDICAL")
+      expect(response.body).to include("Coffee Shop", "Mystery", '<option selected="selected" value="other">Other categories</option>')
+      expect(body_outside_chart).not_to include("Airline", "Big MEDICAL")
+    end
+  end
+
+  describe "spending over time" do
+    before do
+      travel_to Date.new(2026, 10, 12)
+      card.update!(last_statement_issue_date: Date.new(2026, 9, 15))
+      add_transaction(amount: 30, merchant: "Coffee", category: "FOOD_AND_DRINK", date: Date.new(2026, 8, 20))
+      add_transaction(amount: 70, merchant: "Flight", category: "TRAVEL", date: Date.new(2026, 9, 20))
+      add_transaction(amount: 12, merchant: "Lunch", category: "FOOD_AND_DRINK", date: Date.new(2026, 10, 2))
+    end
+
+    after { travel_back }
+
+    it "has its own range, defaulting to 6 months of statement months" do
+      get transactions_path
+
+      expect(response.body).to include("Spending over time", "Total per statement month", "Aug 16 – Sep 15", "Sep 16 – Oct 12 (so far)")
+      expect(response.body).to include("/transactions?chart_range=1y&amp;range=statement&amp;spending_view=total")
+    end
+
+    it "shows a running total by day for ranges under 6 months" do
+      get transactions_path(chart_range: "3m")
+
+      expect(response.body).to include("Running total by day since Jun 16", "Spent so far")
+    end
+
+    it "shows a line per category on request" do
+      get transactions_path(spending_view: "total")
+      expect(response.body.scan('data-line-chart-target="dot"').size).to eq(1)
+
+      get transactions_path(range: "1y", spending_view: "categories")
+      expect(response.body.scan('data-line-chart-target="dot"').size).to eq(2)
+      expect(response.body).to include('aria-label="Legend"')
+    end
+
+    it "lists each point's top purchases for its popover" do
+      get transactions_path(chart_range: "6m")
+
+      expect(response.body).to include("Click to see the top purchases", 'data-line-chart-target="popover"')
+      period = response.body[/<template data-line-chart-target="detail" data-index="5">.*?<\/template>/m]
+      expect(period).to include("Aug 16 – Sep 15", "1 purchase", "Coffee", "Food &amp; drink · Aug 20", "$30.00")
+    end
+
+    it "charts every category even when the list is filtered, keeping the filter in its links" do
+      get transactions_path(range: "1y", category: "TRAVEL", spending_view: "categories")
+
+      expect(response.body).not_to include("Travel only")
+      expect(response.body.scan('data-line-chart-target="dot"').size).to eq(2)
+      expect(response.body).to include("Spending chart lines", "/transactions?category=TRAVEL&amp;chart_range=1y&amp;range=1y&amp;spending_view=categories")
+
+      get transactions_path(range: "1y", category: "TRAVEL")
+      expect(response.body).to include("Coffee", "$30.00") # a Food & drink purchase, in the chart's top purchases
+    end
+
+    it "keeps the chart's range and view when the page range changes, and the page range when the chart's changes" do
+      get transactions_path(range: "1m", spending_view: "categories", chart_range: "1y")
+
+      expect(response.body).to include("/transactions?chart_range=1y&amp;range=3m&amp;spending_view=categories")
+      expect(response.body).to include("/transactions?chart_range=3m&amp;range=1m&amp;spending_view=categories")
     end
   end
 

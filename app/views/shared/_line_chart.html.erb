@@ -1,0 +1,73 @@
+<%# locals: (chart:, aria_label:, details: nil, details_hint: nil) %>
+<%# A line chart laid out by LineChartHelper#line_chart: y-axis labels, the plot with its
+    hover layer (line_chart Stimulus controller), end-of-line labels, and x-axis labels.
+    `details` (HTML per point, optional) open in a second box when a point is clicked;
+    `details_hint` says so in the tooltip. %>
+<div class="<%= class_names("grid grid-cols-[3rem_1fr] gap-x-3", "sm:mr-24": chart.lines.size > 1) %>"
+     data-controller="line-chart" data-line-chart-points-value="<%= chart.hover.to_json %>"
+     <% if details %>data-action="click@window->line-chart#closeOutside keydown.esc@window->line-chart#close"<% end %>>
+  <div class="relative h-64" aria-hidden="true">
+    <% chart.y_ticks.each do |tick| %>
+      <span class="absolute right-0 -translate-y-1/2 text-xs tabular-nums text-base-content/60" style="top: <%= tick.position %>%"><%= tick.label %></span>
+    <% end %>
+  </div>
+
+  <div class="relative">
+    <div class="<%= class_names("relative h-64 rounded-sm outline-offset-4 focus-visible:outline-2 focus-visible:outline-secondary", details ? "cursor-pointer" : "cursor-crosshair") %>"
+         tabindex="0" role="img"
+         aria-label="<%= aria_label %>"
+         data-line-chart-target="plot"
+         data-action="pointermove->line-chart#move pointerleave->line-chart#hide focus->line-chart#focus blur->line-chart#hide keydown->line-chart#key<%= " click->line-chart#toggle" if details %>">
+      <% chart.y_ticks.each do |tick| %>
+        <div class="absolute inset-x-0 border-t border-base-300" style="top: <%= tick.position %>%" aria-hidden="true"></div>
+      <% end %>
+
+      <svg class="absolute inset-0 size-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <% chart.lines.each do |line| %>
+          <polyline points="<%= line.points %>" fill="none" stroke="<%= line.color %>" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" />
+        <% end %>
+      </svg>
+
+      <% chart.lines.each do |line| %>
+        <span class="absolute left-full size-2.5 -translate-1/2 rounded-full ring-2 ring-base-100" style="top: <%= line.end_y %>%; background-color: <%= line.color %>" aria-hidden="true"></span>
+      <% end %>
+
+      <% if chart.lines.size > 1 %>
+        <% end_label_positions(chart.lines).each do |line, position| %>
+          <span class="absolute left-full ml-3 -translate-y-1/2 whitespace-nowrap text-xs font-medium max-sm:hidden" style="top: <%= position %>%" aria-hidden="true"><%= line.label %></span>
+        <% end %>
+      <% end %>
+
+      <div class="pointer-events-none absolute inset-y-0 w-px bg-base-content/30" data-line-chart-target="crosshair" hidden></div>
+      <% chart.lines.each do |line| %>
+        <span class="pointer-events-none absolute size-3 -translate-1/2 rounded-full ring-2 ring-base-100" style="background-color: <%= line.color %>" data-line-chart-target="dot" hidden></span>
+      <% end %>
+      <div class="pointer-events-none absolute top-0 z-10 w-52 rounded-box border border-base-300 bg-base-100 px-3 py-2 shadow-lg shadow-black/5"
+           data-line-chart-target="tooltip" aria-live="polite" hidden>
+        <p class="text-xs text-base-content/60" data-line-chart-target="date"></p>
+        <div class="mt-1 flex flex-col gap-1" data-line-chart-target="rows"></div>
+        <% if details_hint %><p class="mt-2 border-t border-base-300 pt-1.5 text-xs text-base-content/60"><%= details_hint %></p><% end %>
+      </div>
+    </div>
+
+  <% if details %>
+    <% details.each_with_index do |html, index| %>
+      <template data-line-chart-target="detail" data-index="<%= index %>"><%= html %></template>
+    <% end %>
+    <div class="absolute z-20 w-72 rounded-box border border-base-300 bg-base-100 p-4 shadow-lg shadow-black/10"
+         role="dialog" aria-label="Purchases" data-line-chart-target="popover" hidden>
+      <button type="button" class="btn btn-ghost btn-square btn-xs absolute top-2 right-2" aria-label="Close" data-action="line-chart#close">
+        <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+      <div data-line-chart-target="popoverBody"></div>
+    </div>
+  <% end %>
+  </div>
+
+  <div></div>
+  <div class="relative mt-2 h-4" aria-hidden="true">
+    <% chart.x_ticks.each_with_index do |tick, index| %>
+      <span class="<%= class_names("absolute -translate-x-1/2 whitespace-nowrap text-xs text-base-content/60", "max-sm:hidden": chart.x_ticks.size > 6 && index.odd?) %>" style="left: <%= tick.position %>%"><%= tick.label %></span>
+    <% end %>
+  </div>
+</div>

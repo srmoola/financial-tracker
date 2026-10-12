@@ -21,6 +21,19 @@ RSpec.describe "Onboarding and the Accounts page", type: :request do
     expect(response.body).to include("First Platypus Bank", "Plaid Credit Card", "Credit Card · •••• 3333", "−$410.00", "updated about 1 hour ago")
   end
 
+  it "marks $0 accounts as not shown on the dashboard" do
+    sign_in_as users(:one)
+    item = users(:one).plaid_items.create!(item_id: "item-1", access_token: "token", institution_name: "First Platypus Bank")
+    item.accounts.create!(plaid_account_id: "acc-1", name: "Plaid Checking", account_type: "depository", subtype: "checking", current_balance: 1200)
+    item.accounts.create!(plaid_account_id: "acc-2", name: "Paid Off Card", account_type: "credit", subtype: "credit card", current_balance: 0)
+
+    get accounts_path
+
+    expect(response.body).to include("Plaid Checking", "Paid Off Card", "2 accounts")
+    expect(response.body).not_to include("−$0.00")
+    expect(response.body.scan("Not shown on dashboard").size).to eq(1)
+  end
+
   it "shows an empty state with no connections" do
     sign_in_as users(:one)
 

@@ -16,6 +16,9 @@ class Account < ApplicationRecord
   # Plaid's current balance; for credit cards, the amount owed.
   def balance = current_balance || 0
 
+  # Accounts with a $0 balance (e.g. a paid-off card) are left off the dashboard.
+  def shown_on_dashboard? = !balance.zero?
+
   # The first day of this card's current statement period: the day after its
   # last statement (moved forward a month at a time if that date is stale), or
   # the 1st of the month when Plaid hasn't provided a statement date.

@@ -24,12 +24,12 @@
 
   <%# Everything below updates in place (range, category, page) without reloading the page. %>
   <%= turbo_frame_tag "transactions_content", class: "block transition-opacity aria-busy:opacity-60",
-        data: { turbo_action: "advance", controller: "frame-scroll recategorize transaction-note", transaction_note_max_length_value: Transaction::NOTE_MAX_LENGTH, action: "turbo:click->frame-scroll#remember turbo:frame-render->frame-scroll#restore" } do %>
+        data: { turbo_action: "advance", controller: "frame-scroll recategorize transaction-note", transaction_note_max_length_value: Transaction::NOTE_MAX_LENGTH, action: "turbo:click->frame-scroll#remember turbo:before-frame-render->frame-scroll#keepPosition turbo:frame-render->frame-scroll#restore" } do %>
     <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
       <p class="text-sm font-medium text-base-content/70"><%= range_heading %></p>
       <nav class="tabs tabs-box tabs-sm" aria-label="Time range">
         <% TransactionsController::RANGES.each do |key, label| %>
-          <%= link_to label, transactions_path(range: key, category: @category), class: class_names("tab", "tab-active": key == @range), aria: { current: (key == @range) || nil } %>
+          <%= link_to label, transactions_path(range: key, category: @category, spending_view: @spending_view, chart_range: @chart_range), class: class_names("tab", "tab-active": key == @range), aria: { current: (key == @range) || nil } %>
         <% end %>
       </nav>
     </div>
@@ -47,19 +47,25 @@
       </section>
     <% else %>
       <div class="mt-4">
-        <%= render "spending", spending: @spending, range: @range, range_text:, selected: @category %>
+        <%= render "spending", spending: @spending, range: @range, range_text:, selected: @category, spending_view: @spending_view, chart_range: @chart_range %>
+      </div>
+
+      <div class="mt-6">
+        <%= render "spending_history", history: @spending_history, spending: @spending, view: @spending_view, range: @range, chart_range: @chart_range, list_category: @category %>
       </div>
 
       <section class="card mt-6 border border-base-300 bg-base-100" aria-labelledby="transactions-heading">
         <div class="card-body gap-0 p-0">
           <div class="flex flex-col gap-2 px-6 pt-6 pb-3 sm:flex-row sm:items-center sm:justify-between sm:px-8">
-            <div class="flex flex-wrap items-center gap-2">
+            <div class="flex flex-wrap items-center gap-3">
               <h2 id="transactions-heading" class="scroll-mt-4 text-lg font-bold tracking-tight">Transactions</h2>
-              <% if category_label %>
-                <%= link_to transactions_path(range: @range), class: "badge badge-lg gap-1 border-base-300 bg-base-200 font-medium hover:bg-base-300", aria: { label: "Clear the #{category_label} filter" } do %>
-                  <%= category_label %>
-                  <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
-                <% end %>
+              <%= form_with url: transactions_path, method: :get, data: { controller: "auto-submit" } do |form| %>
+                <%= form.hidden_field :range, value: @range %>
+                <%= form.hidden_field :spending_view, value: @spending_view %>
+                <%= form.hidden_field :chart_range, value: @chart_range %>
+                <%= form.select :category, options_for_select(@category_options, @category), { include_blank: "All categories" },
+                      class: class_names("select select-sm w-auto", "select-primary": @category), aria: { label: "Filter by category" },
+                      data: { action: "auto-submit#submit" } %>
               <% end %>
             </div>
             <p class="text-sm text-base-content/60">
@@ -83,11 +89,11 @@
                   <% account = transaction.account %>
                   <li class="flex items-center gap-4 px-6 py-3 sm:px-8">
                     <div class="grid size-10 shrink-0 place-items-center rounded-xl bg-base-200 text-sm font-semibold" aria-hidden="true">
-                      <%= (transaction.merchant_name.presence || transaction.description).to_s.first.upcase %>
+                      <%= transaction.masked_description? ? "?" : transaction.display_name.first.upcase %>
                     </div>
                     <div class="min-w-0 flex-1">
                       <p class="flex items-center gap-2 font-medium">
-                        <span class="truncate"><%= transaction.merchant_name.presence || transaction.description %></span>
+                        <span class="truncate"><%= transaction.display_name %></span>
                         <% if transaction.pending %><span class="badge badge-sm badge-soft badge-warning shrink-0">Pending</span><% end %>
                       </p>
                       <div class="flex min-w-0 items-center gap-1 text-xs text-base-content/60">
@@ -97,7 +103,7 @@
                                 aria-label="Category: <%= category_label %><%= " (changed by you)" if transaction.recategorized? %>. Change category"
                                 data-action="recategorize#open"
                                 data-recategorize-url-param="<%= transaction_path(transaction) %>"
-                                data-recategorize-merchant-param="<%= transaction.merchant_name.presence || transaction.description %>"
+                                data-recategorize-merchant-param="<%= transaction.display_name %>"
                                 data-recategorize-amount-param="<%= number_to_currency(transaction.amount.abs) %>"
                                 data-recategorize-category-param="<%= transaction.effective_category %>"
                                 data-recategorize-plaid-category-param="<%= transaction.category %>"
@@ -106,6 +112,7 @@
                           <% if transaction.recategorized? %><span class="size-1.5 rounded-full bg-secondary" aria-hidden="true"></span><% end %>
                           <svg class="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
                         </button>
+                        <% if transaction.masked_description? %><span class="truncate max-sm:hidden" title="As it appears on your statement">· <%= transaction.description %></span><% end %>
                         <span class="truncate">· <%= account.name %><%= " •••• #{account.mask}" if account.mask.present? %></span>
                       </div>
                       <% if transaction.note %>
@@ -117,11 +124,11 @@
                     </div>
                     <button type="button"
                             class="<%= class_names("btn btn-ghost btn-square btn-sm shrink-0", transaction.note ? "text-base-content" : "text-base-content/40 hover:text-base-content") %>"
-                            aria-label="<%= transaction.note ? "Edit note" : "Add a note" %> for <%= transaction.merchant_name.presence || transaction.description %>"
+                            aria-label="<%= transaction.note ? "Edit note" : "Add a note" %> for <%= transaction.display_name %>"
                             title="<%= transaction.note ? "Edit note" : "Add a note" %>"
                             data-action="transaction-note#open"
                             data-transaction-note-url-param="<%= transaction_path(transaction) %>"
-                            data-transaction-note-merchant-param="<%= transaction.merchant_name.presence || transaction.description %>"
+                            data-transaction-note-merchant-param="<%= transaction.display_name %>"
                             data-transaction-note-amount-param="<%= number_to_currency(transaction.amount.abs) %>"
                             data-transaction-note-note-param="<%= transaction.note %>">
                       <svg class="size-4" viewBox="0 0 24 24" fill="<%= transaction.note ? "currentColor" : "none" %>" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v12H8l-4 4z"/></svg>
@@ -136,7 +143,7 @@
           <% end %>
 
           <% if @page_count > 1 %>
-            <% page_link = ->(number) { transactions_path(range: @range, category: @category, page: number) } %>
+            <% page_link = ->(number) { transactions_path(range: @range, category: @category, spending_view: @spending_view, chart_range: @chart_range, page: number) } %>
             <nav class="flex justify-center border-t border-base-300 px-6 py-4" aria-label="Pagination">
               <div class="join">
                 <% if @page > 1 %>

@@ -11,7 +11,9 @@ module LineChartHelper
   #   y_ticks - round values with their distance from the top (%)
   #   x_ticks - dates with their distance from the left (%)
   #   hover   - per date: [x%, date label, [y% per series], tooltip rows]
-  def line_chart(dates, series, tooltip_rows:)
+  # `hover_labels` and `x_labels` ([[index, label], ...]) replace the default
+  # date-based labels, e.g. for points that each stand for a statement period.
+  def line_chart(dates, series, tooltip_rows:, hover_labels: nil, x_labels: nil)
     values = series.flat_map(&:values)
     step = nice_step(values.max - values.min)
     low = (values.min / step).floor * step
@@ -27,22 +29,23 @@ module LineChartHelper
           points: line.values.each_with_index.map { |value, index| "#{x.(index)},#{y.(value)}" }.join(" "))
       end,
       y_ticks: low.step(high, step).map { |value| Tick.new(label: compact_currency(value, step), position: y.(value)) },
-      x_ticks: date_ticks(dates).map { |index, label| Tick.new(label:, position: x.(index)) },
+      x_ticks: (x_labels || date_ticks(dates)).map { |index, label| Tick.new(label:, position: x.(index)) },
       hover: dates.each_with_index.map do |date, index|
-        [ x.(index), date.strftime("%b %-d, %Y"), series.map { |line| y.(line.values[index]) }, tooltip_rows[index] ]
+        [ x.(index), hover_labels ? hover_labels[index] : date.strftime("%b %-d, %Y"), series.map { |line| y.(line.values[index]) }, tooltip_rows[index] ]
       end
     )
   end
 
   # Where to put each line's end label (% from the top), nudged apart so labels
-  # for lines that end close together don't overlap.
+  # for lines that end close together don't overlap, and kept within the plot.
   def end_label_positions(lines, min_gap: 9)
-    previous = nil
-    lines.sort_by(&:end_y).map do |line|
-      position = previous ? [ line.end_y, previous + min_gap ].max : line.end_y
-      previous = position
-      [ line, position ]
-    end
+    sorted = lines.sort_by(&:end_y)
+    positions = sorted.map(&:end_y)
+    # Push labels down to make room, then back up if the last ones ran past the bottom.
+    (1...positions.size).each { |index| positions[index] = [ positions[index], positions[index - 1] + min_gap ].max }
+    positions[-1] = [ positions[-1], 100 ].min if positions.any?
+    (positions.size - 2).downto(0) { |index| positions[index] = [ positions[index], positions[index + 1] - min_gap ].min }
+    sorted.zip(positions)
   end
 
   private

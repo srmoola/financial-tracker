@@ -31,4 +31,12 @@ class Transaction < ApplicationRecord
 
   def effective_category = category_override || category
   def recategorized? = category_override.present?
+
+  # The name to show: Plaid's merchant name, otherwise the statement description,
+  # unless the card masked it with asterisks (e.g. "*********-********").
+  def display_name = merchant_name.presence || (description.presence unless masked_description?) || "Unknown merchant"
+
+  # True when Plaid found no merchant and the card masked the description, so it
+  # isn't a useful name.
+  def masked_description? = merchant_name.blank? && description.to_s.include?("**")
 end
