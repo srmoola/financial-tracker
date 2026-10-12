@@ -143,6 +143,48 @@ RSpec.describe "Transactions page", type: :request do
     end
   end
 
+  describe "spending over time" do
+    before do
+      travel_to Date.new(2026, 10, 12)
+      card.update!(last_statement_issue_date: Date.new(2026, 9, 15))
+      add_transaction(amount: 30, merchant: "Coffee", category: "FOOD_AND_DRINK", date: Date.new(2026, 8, 20))
+      add_transaction(amount: 70, merchant: "Flight", category: "TRAVEL", date: Date.new(2026, 9, 20))
+      add_transaction(amount: 12, merchant: "Lunch", category: "FOOD_AND_DRINK", date: Date.new(2026, 10, 2))
+    end
+
+    after { travel_back }
+
+    it "shows a running total for This month" do
+      get transactions_path
+
+      expect(response.body).to include("Spending over time", "Running total through this statement period", "Spent so far")
+    end
+
+    it "shows a total per statement month for longer ranges, with a line per category on request" do
+      get transactions_path(range: "1m")
+      expect(response.body).to include("Total for each statement month", "Aug 16 – Sep 15", "Sep 16 – Oct 12 (so far)")
+      expect(response.body.scan('data-line-chart-target="dot"').size).to eq(1)
+
+      get transactions_path(range: "1m", spending_view: "categories")
+      expect(response.body.scan('data-line-chart-target="dot"').size).to eq(2)
+      expect(response.body).to include('aria-label="Legend"')
+    end
+
+    it "charts just the selected category when the list is filtered" do
+      get transactions_path(range: "1m", category: "TRAVEL", spending_view: "categories")
+
+      expect(response.body).to include("· Travel only")
+      expect(response.body.scan('data-line-chart-target="dot"').size).to eq(1)
+      expect(response.body).not_to include("Spending chart lines")
+    end
+
+    it "keeps the chart view when switching ranges" do
+      get transactions_path(range: "1m", spending_view: "categories")
+
+      expect(response.body).to include("/transactions?range=3m&amp;spending_view=categories")
+    end
+  end
+
   it "paginates 25 per page with numbered pages, newest first" do
     30.times { |days_ago| add_transaction(amount: 1, merchant: "Shop #{days_ago}", date: Date.current - days_ago) }
 

@@ -1,4 +1,4 @@
-<%# locals: (spending:, range:, range_text:, selected:) %>
+<%# locals: (spending:, range:, range_text:, selected:, spending_view: "total") %>
 <% categories = spending.categories %>
 <% segments = donut_segments(categories.map { |category| category.total.to_f }, colors: spending_colors(categories), radius: 80) %>
 <% total_label = number_to_currency(spending.total) %>
@@ -51,7 +51,7 @@
             <% share = number_to_percentage(segment.share * 100, precision: 1) %>
             <% active = category.param == selected %>
             <li>
-              <%= link_to transactions_path(range:, category: (category.param unless active)),
+              <%= link_to transactions_path(range:, category: (category.param unless active), spending_view:),
                     class: class_names("flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-base-200", "ring-1 ring-base-content/20": active),
                     aria: { current: active || nil, label: active ? "Show all categories" : "Show #{category.label} transactions" },
                     data: {

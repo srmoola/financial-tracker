@@ -38,4 +38,10 @@ RSpec.describe LineChartHelper, type: :helper do
 
     expect(helper.end_label_positions(lines).map(&:last)).to eq([ 10.0, 50.0, 59.0 ])
   end
+
+  it "moves end labels back up when they'd run past the bottom of the plot" do
+    lines = [ 96.0, 98.0, 100.0 ].map { |end_y| LineChartHelper::Line.new(key: end_y, label: "", color: "", points: "", end_y:) }
+
+    expect(helper.end_label_positions(lines).map(&:last)).to eq([ 82.0, 91.0, 100.0 ])
+  end
 end

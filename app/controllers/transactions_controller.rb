@@ -28,6 +28,12 @@ class TransactionsController < ApplicationController
     @category = params[:category].presence
     listed = @category ? @spending.filter(in_range, @category) : in_range
 
+    @spending_view = params[:spending_view] == "categories" ? "categories" : "total"
+    @spending_history = SpendingHistory.new(
+      listed.where("amount > 0"), cards: @credit_cards,
+      category_keys: @spending.categories.map(&:key) - [ :other ], periods_back: @statements_back
+    )
+
     @total_count = listed.count
     @page_count = [ (@total_count / PER_PAGE.to_f).ceil, 1 ].max
     @page = params[:page].to_i.clamp(1, @page_count)
