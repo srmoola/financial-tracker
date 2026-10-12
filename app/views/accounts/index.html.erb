@@ -49,11 +49,14 @@
                 <span class="<%= class_names("size-2.5 shrink-0 rounded-full", "border-2 border-base-content/40": color.nil?) %>"
                       style="<%= "background-color: #{color}" if color %>" aria-hidden="true"></span>
                 <div class="min-w-0 flex-1">
-                  <p class="truncate font-medium"><%= account.name %></p>
+                  <p class="flex min-w-0 items-center gap-2">
+                    <span class="truncate font-medium"><%= account.name %></span>
+                    <% unless account.shown_on_dashboard? %><span class="badge badge-ghost badge-sm shrink-0">Not shown on dashboard</span><% end %>
+                  </p>
                   <p class="text-xs text-base-content/60"><%= [ account_subtype_label(account.subtype), ("•••• #{account.mask}" if account.mask.present?) ].compact.join(" · ") %></p>
                 </div>
                 <p class="flex-none tabular-nums">
-                  <%= "−" if account.account_type == "credit" %><%= number_to_currency(account.balance) %>
+                  <%= "−" if account.account_type == "credit" && !account.balance.zero? %><%= number_to_currency(account.balance) %>
                 </p>
               </li>
             <% end %>

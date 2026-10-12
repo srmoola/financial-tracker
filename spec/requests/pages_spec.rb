@@ -90,4 +90,28 @@ RSpec.describe "Pages", type: :request do
     expect(response.body.scan('data-line-chart-target="dot"').size).to eq(3)
     expect(response.body).to include('aria-label="Legend"')
   end
+
+  it "leaves $0 accounts off the dashboard" do
+    sign_in_as users(:one)
+    item = users(:one).plaid_items.create!(item_id: "item-1", access_token: "token", institution_name: "First Platypus Bank")
+    item.accounts.create!(plaid_account_id: "acc-1", name: "Plaid Checking", account_type: "depository", subtype: "checking", current_balance: 1200)
+    item.accounts.create!(plaid_account_id: "acc-2", name: "Empty Savings", account_type: "depository", subtype: "savings", current_balance: 0)
+    item.accounts.create!(plaid_account_id: "acc-3", name: "Paid Off Card", account_type: "credit", subtype: "credit card", current_balance: 0)
+
+    get root_path
+
+    expect(response.body).to include("Plaid Checking", "1 account")
+    expect(response.body).not_to include("Empty Savings", "Paid Off Card", "Savings", "subtracted from net worth", "Sample data")
+  end
+
+  it "shows a $0 dashboard when every account is empty" do
+    sign_in_as users(:one)
+    item = users(:one).plaid_items.create!(item_id: "item-1", access_token: "token", institution_name: "First Platypus Bank")
+    item.accounts.create!(plaid_account_id: "acc-1", name: "Empty Checking", account_type: "depository", subtype: "checking", current_balance: 0)
+
+    get root_path
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).not_to include("Empty Checking", "Sample data", "Link your real accounts")
+  end
 end
