@@ -1,6 +1,6 @@
 # Financial Tracker
 
-Rails 8.1 · PostgreSQL · Solid Queue · Tailwind CSS v4 · daisyUI 5
+[See Planning Doc for full info](https://docs.google.com/document/d/11T2tdCursPBmwA5hqIhpauWTpTsELoo2EJcyd382PVA/edit?tab=t.2gsqph96b2h4#heading=h.6rqutxtptwpt)
 
 ## Running with Docker (development)
 
