@@ -1,4 +1,19 @@
 module TransactionsHelper
+  # Web addresses in notes: http(s):// or www., stopping before trailing punctuation.
+  NOTE_URL_PATTERN = /\b(?:https?:\/\/|www\.)[^\s<>"]*[^\s<>".,:;!?)\]'}]/i
+
+  # A note with its web addresses turned into links (opening in a new tab).
+  # Everything else is escaped, so a note can't add its own HTML.
+  def linkify_note(note)
+    parts = note.to_s.split(/(#{NOTE_URL_PATTERN})/o)
+    safe_join(parts.map.with_index do |part, index|
+      next part unless index.odd? # odd parts are the captured URLs
+
+      url = part.match?(%r{\Ahttps?://}i) ? part : "https://#{part}"
+      link_to part, url, target: "_blank", rel: "noopener noreferrer nofollow", class: "link break-all"
+    end)
+  end
+
   # Page numbers to show: the first, the last, and the current page with its
   # neighbors, with :gap where pages are skipped (e.g. 1 … 4 5 6 … 12).
   def page_window(page, page_count)

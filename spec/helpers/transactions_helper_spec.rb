@@ -10,6 +10,35 @@ RSpec.describe TransactionsHelper, type: :helper do
     expect(helper.page_window(3, 9)).to eq([ 1, 2, 3, 4, :gap, 9 ])
   end
 
+  describe "#linkify_note" do
+    it "turns web addresses into links that open in a new tab" do
+      html = helper.linkify_note("Order details: https://www.amazon.com/gp/your-account/order-details?orderID=123-456")
+
+      expect(html).to eq(%(Order details: <a target="_blank" rel="noopener noreferrer nofollow" class="link break-all" href="https://www.amazon.com/gp/your-account/order-details?orderID=123-456">https://www.amazon.com/gp/your-account/order-details?orderID=123-456</a>))
+      expect(html).to be_html_safe
+    end
+
+    it "links www. addresses and leaves trailing punctuation out of the link" do
+      html = helper.linkify_note("See www.example.com/receipt. Thanks!")
+
+      expect(html).to include(%(href="https://www.example.com/receipt">www.example.com/receipt</a>. Thanks!))
+    end
+
+    it "handles several links and plain text" do
+      html = helper.linkify_note("a http://one.test b (https://two.test) c")
+
+      expect(html.scan("<a ").size).to eq(2)
+      expect(html).to include(">http://one.test</a> b (<a", ">https://two.test</a>) c")
+    end
+
+    it "escapes everything else, so a note can't inject HTML or script links" do
+      html = helper.linkify_note(%(<script>alert(1)</script> javascript:alert(1) "quoted"))
+
+      expect(html).to eq(%(&lt;script&gt;alert(1)&lt;/script&gt; javascript:alert(1) &quot;quoted&quot;))
+      expect(html).not_to include("<a ")
+    end
+  end
+
   describe "#statement_range_heading" do
     let(:card) { Account.new(last_statement_issue_date: Date.new(2026, 9, 15)) }
 
