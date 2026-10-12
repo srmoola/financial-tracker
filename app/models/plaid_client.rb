@@ -1,21 +1,22 @@
-# The Plaid API client, configured from encrypted credentials:
+# The Plaid API client. Keys come from environment variables (locally, the
+# gitignored .env file loaded by Docker Compose), falling back to encrypted
+# credentials:
 #
-#   plaid:
-#     client_id: ...
-#     secret: ...
-#     environment: sandbox # or production
+#   PLAID_CLIENT_ID / PLAID_SECRET / PLAID_ENV (sandbox or production)
+#   or credentials: plaid: { client_id:, secret:, environment: }
 module PlaidClient
   def self.api
     @api ||= begin
-      credentials = Rails.application.credentials.plaid
-      if credentials.blank?
-        raise "Plaid credentials are missing. Add plaid.client_id, plaid.secret and plaid.environment with bin/rails credentials:edit"
-      end
+      credentials = Rails.application.credentials.plaid || {}
+      client_id = ENV["PLAID_CLIENT_ID"].presence || credentials[:client_id]
+      secret = ENV["PLAID_SECRET"].presence || credentials[:secret]
+      environment = ENV["PLAID_ENV"].presence || credentials[:environment] || "sandbox"
+      raise "Plaid keys are missing. Set PLAID_CLIENT_ID and PLAID_SECRET (e.g. in .env)." if client_id.blank? || secret.blank?
 
       configuration = Plaid::Configuration.new
-      configuration.server_index = Plaid::Configuration::Environment.fetch(credentials.fetch(:environment, "sandbox"))
-      configuration.api_key["PLAID-CLIENT-ID"] = credentials.fetch(:client_id)
-      configuration.api_key["PLAID-SECRET"] = credentials.fetch(:secret)
+      configuration.server_index = Plaid::Configuration::Environment.fetch(environment)
+      configuration.api_key["PLAID-CLIENT-ID"] = client_id
+      configuration.api_key["PLAID-SECRET"] = secret
       Plaid::PlaidApi.new(Plaid::ApiClient.new(configuration))
     end
   end

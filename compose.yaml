@@ -5,6 +5,10 @@ x-app: &app
     dockerfile: Dockerfile.dev
   volumes:
     - .:/rails
+  # Local secrets (e.g. Plaid keys). .env is gitignored; it's optional so the app still boots without it.
+  env_file:
+    - path: .env
+      required: false
   environment:
     DB_HOST: db
     DB_USERNAME: postgres

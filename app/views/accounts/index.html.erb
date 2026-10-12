@@ -35,7 +35,7 @@
               <li class="flex items-center gap-3 px-5 py-3 text-sm">
                 <div class="min-w-0 flex-1">
                   <p class="truncate font-medium"><%= account.name %></p>
-                  <p class="text-xs text-base-content/60"><%= [ account.subtype&.titleize, ("•••• #{account.mask}" if account.mask.present?) ].compact.join(" · ") %></p>
+                  <p class="text-xs text-base-content/60"><%= [ account_subtype_label(account.subtype), ("•••• #{account.mask}" if account.mask.present?) ].compact.join(" · ") %></p>
                 </div>
                 <p class="flex-none tabular-nums">
                   <%= "−" if account.account_type == "credit" %><%= number_to_currency(account.balance) %>
