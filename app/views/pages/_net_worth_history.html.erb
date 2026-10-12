@@ -1,0 +1,85 @@
+<%# locals: (history:, range:) %>
+<% chart = line_chart(history.points.map(&:date), history.points.map { |point| point.net_worth.to_f }) %>
+<% up = history.change >= 0 %>
+<% range_label = { "1m" => "month", "3m" => "3 months", "6m" => "6 months", "1y" => "year" }.fetch(range) %>
+
+<%= turbo_frame_tag "net_worth_history", class: "block transition-opacity aria-busy:opacity-50" do %>
+  <section aria-labelledby="net-worth-history-heading">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h2 id="net-worth-history-heading" class="text-lg font-bold tracking-tight">Net worth over time</h2>
+      <nav class="tabs tabs-box tabs-sm" aria-label="Time range">
+        <% NetWorthHistory::RANGES.each_key do |key| %>
+          <%= link_to key.upcase, root_path(range: key),
+                class: class_names("tab", "tab-active": key == range),
+                aria: { current: (key == range) || nil },
+                data: { turbo_frame: "net_worth_history", turbo_action: "advance" } %>
+        <% end %>
+      </nav>
+    </div>
+
+    <div class="card mt-3 border border-base-300 bg-base-100">
+      <div class="card-body gap-6 p-6 sm:p-8">
+        <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <svg class="size-4 <%= up ? "text-success" : "text-error" %>" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="<%= up ? "M12 19V5M5 12l7-7 7 7" : "M12 5v14M19 12l-7 7-7-7" %>" />
+          </svg>
+          <span class="font-semibold tabular-nums">
+            <%= up ? "+" : "−" %><%= number_to_currency(history.change.abs) %>
+            (<%= up ? "+" : "−" %><%= number_to_percentage(history.change_percent.abs, precision: 1) %>)
+          </span>
+          <span class="text-sm text-base-content/60">over the last <%= range_label %></span>
+        </div>
+
+        <div class="grid grid-cols-[3rem_1fr] gap-x-3" data-controller="line-chart" data-line-chart-points-value="<%= chart.points.to_json %>">
+          <div class="relative h-64" aria-hidden="true">
+            <% chart.y_ticks.each do |tick| %>
+              <span class="absolute right-0 -translate-y-1/2 text-xs tabular-nums text-base-content/60" style="top: <%= tick.position %>%"><%= tick.label %></span>
+            <% end %>
+          </div>
+
+          <div class="relative h-64 cursor-crosshair rounded-sm outline-offset-4 focus-visible:outline-2 focus-visible:outline-secondary"
+               tabindex="0" role="img"
+               aria-label="Net worth from <%= history.points.first.date.strftime("%b %-d, %Y") %> (<%= number_to_currency(history.points.first.net_worth) %>) to <%= history.points.last.date.strftime("%b %-d, %Y") %> (<%= number_to_currency(history.points.last.net_worth) %>). Use the left and right arrow keys to read daily values."
+               data-line-chart-target="plot"
+               data-action="pointermove->line-chart#move pointerleave->line-chart#hide focus->line-chart#focus blur->line-chart#hide keydown->line-chart#key">
+            <% chart.y_ticks.each do |tick| %>
+              <div class="absolute inset-x-0 border-t border-base-300" style="top: <%= tick.position %>%" aria-hidden="true"></div>
+            <% end %>
+
+            <svg class="absolute inset-0 size-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              <polyline points="<%= chart.line %>" fill="none" stroke="#0a85ea" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" />
+            </svg>
+
+            <% last_x, last_y = chart.points.last %>
+            <span class="absolute size-2.5 -translate-1/2 rounded-full bg-[#0a85ea] ring-2 ring-base-100" style="left: <%= last_x %>%; top: <%= last_y %>%" aria-hidden="true"></span>
+
+            <div class="pointer-events-none absolute inset-y-0 w-px bg-base-content/30" data-line-chart-target="crosshair" hidden></div>
+            <span class="pointer-events-none absolute size-3 -translate-1/2 rounded-full bg-[#0a85ea] ring-2 ring-base-100" data-line-chart-target="dot" hidden></span>
+            <div class="pointer-events-none absolute top-0 z-10 whitespace-nowrap rounded-box border border-base-300 bg-base-100 px-3 py-2 shadow-lg shadow-black/5"
+                 data-line-chart-target="tooltip" aria-live="polite" hidden>
+              <p class="font-semibold tabular-nums" data-line-chart-target="value"></p>
+              <p class="text-xs text-base-content/60" data-line-chart-target="date"></p>
+            </div>
+          </div>
+
+          <div></div>
+          <div class="relative mt-2 h-4" aria-hidden="true">
+            <% chart.x_ticks.each_with_index do |tick, index| %>
+              <span class="<%= class_names("absolute -translate-x-1/2 text-xs text-base-content/60", "max-sm:hidden": chart.x_ticks.size > 6 && index.odd?) %>" style="left: <%= tick.position %>%"><%= tick.label %></span>
+            <% end %>
+          </div>
+        </div>
+
+        <table class="sr-only">
+          <caption>Net worth on the first of each month</caption>
+          <thead><tr><th scope="col">Date</th><th scope="col">Net worth</th></tr></thead>
+          <tbody>
+            <% history.points.select { |point| point.date.day == 1 || point == history.points.last }.each do |point| %>
+              <tr><td><%= point.date.strftime("%b %-d, %Y") %></td><td><%= number_to_currency(point.net_worth) %></td></tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+<% end %>
