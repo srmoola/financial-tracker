@@ -2,10 +2,16 @@ import { Controller } from "@hotwired/stimulus"
 
 // Crosshair and tooltip for a line chart. Snaps to the day nearest the pointer;
 // with the chart focused, the arrow keys (and Home/End) move between days.
+// On touch screens, sliding a finger across the chart moves the reading (the
+// plot only lets the browser scroll vertically), and the reading stays after
+// the finger lifts until the next tap elsewhere.
 // The tooltip's first row is the headline value; the rest are its breakdown.
 // Charts with details (a <template> per point) open them in a second box,
 // beside the tooltip, when a point is clicked or with Enter; clicking (or
 // Enter) again, Escape, or a click elsewhere closes it.
+const GAP = 12 // px between a point and the boxes beside it
+const SCREEN_MARGIN = 8 // px the boxes keep from the screen's edges
+
 export default class extends Controller {
   static targets = ["plot", "crosshair", "dot", "tooltip", "date", "rows", "detail", "popover", "popoverBody"]
   static values = { points: Array } // [[x%, date label, [y% per line], [[label, value, color], ...]], ...]
@@ -49,9 +55,16 @@ export default class extends Controller {
     this.#show(Math.min(Math.max(moves[event.key], 0), this.#lastIndex))
   }
 
-  hide() {
+  hide(event) {
+    if (event?.pointerType === "touch") return // a finger lifting off keeps its reading
+
     this.index = undefined
     this.#markers.forEach((element) => (element.hidden = true))
+  }
+
+  // A tap anywhere else clears the reading a finger left behind.
+  dismiss(event) {
+    if (this.index !== undefined && !this.plotTarget.contains(event.target)) this.hide()
   }
 
   #show(index) {
@@ -63,41 +76,64 @@ export default class extends Controller {
       dot.style.left = `${x}%`
       dot.style.top = `${ys[line]}%`
     })
-    this.tooltipTarget.style.left = `${x}%`
-    // Keep the tooltip beside the crosshair, on whichever side has room.
-    this.tooltipTarget.style.transform = x > 55 ? "translateX(calc(-100% - 12px))" : "translateX(12px)"
     this.dateTarget.textContent = date
     this.rowsTarget.replaceChildren(...rows.map((row, position) => this.#row(row, position === 0)))
 
     this.#markers.forEach((element) => (element.hidden = false))
+    // Beside the crosshair (placed once it's showing, so it can be measured).
+    const pointX = (x / 100) * this.plotTarget.offsetWidth
+    this.tooltipTarget.style.left = `${this.#besidePoint(this.tooltipTarget, pointX, x > 55)}px`
   }
 
   // Beside the point, on the other side from the tooltip: level with the click
   // (or the highest line, from the keyboard), opening downward from the top
-  // half. Where that side has no room, it goes under the tooltip instead.
-  // Never off screen.
+  // half. Where that side has no room on screen, it goes under the tooltip.
   #placePopover(clientY) {
     const rect = this.plotTarget.getBoundingClientRect()
     const [x, , ys] = this.pointsValue[this.index]
     const width = this.popoverTarget.offsetWidth
     const pointX = (x / 100) * rect.width
-    const margin = 8
-    const minLeft = margin - rect.left
-    const maxLeft = window.innerWidth - margin - rect.left - width
-    const tooltipOnLeft = x > 55 // as in #show
+    const tooltipOnLeft = this.tooltipTarget.offsetLeft < pointX
+    const beside = tooltipOnLeft ? pointX + GAP : pointX - GAP - width
 
-    let left = tooltipOnLeft ? pointX + 12 : pointX - 12 - width
-    let top = clientY === undefined ? (Math.min(...ys) / 100) * rect.height : clientY - rect.top
-    let transform = top > rect.height / 2 ? "translateY(-100%)" : ""
-    if (left < minLeft || left > maxLeft) {
-      left = tooltipOnLeft ? pointX - 12 - width : pointX + 12
-      top = this.tooltipTarget.offsetTop + this.tooltipTarget.offsetHeight + margin
+    let left, top, transform
+    if (this.#fitsOnScreen(beside, width)) {
+      left = beside
+      top = clientY === undefined ? (Math.min(...ys) / 100) * rect.height : clientY - rect.top
+      transform = top > rect.height / 2 ? "translateY(-100%)" : ""
+    } else {
+      left = this.#keptOnScreen(this.tooltipTarget.offsetLeft, width)
+      top = this.tooltipTarget.offsetTop + this.tooltipTarget.offsetHeight + SCREEN_MARGIN
       transform = ""
     }
 
-    this.popoverTarget.style.left = `${Math.min(Math.max(left, minLeft), maxLeft)}px`
+    this.popoverTarget.style.left = `${left}px`
     this.popoverTarget.style.top = `${top}px`
     this.popoverTarget.style.transform = transform
+  }
+
+  // Where `element` goes (its left edge, in px from the plot's left) to sit
+  // beside the point at `pointX`: on the preferred side if it fits on screen,
+  // else on the other side, else as close as the screen allows.
+  #besidePoint(element, pointX, preferLeft) {
+    const width = element.offsetWidth
+    const onLeft = pointX - GAP - width
+    const onRight = pointX + GAP
+    const [preferred, other] = preferLeft ? [onLeft, onRight] : [onRight, onLeft]
+    return [preferred, other].find((left) => this.#fitsOnScreen(left, width)) ?? this.#keptOnScreen(preferred, width)
+  }
+
+  #fitsOnScreen(left, width) {
+    return this.#keptOnScreen(left, width) === left
+  }
+
+  // `left` (px from the plot's left), moved just enough to keep a box `width`
+  // px wide inside the screen. Uses the page's width rather than
+  // window.innerWidth, which grows on phones once anything overflows.
+  #keptOnScreen(left, width) {
+    const plotLeft = this.plotTarget.getBoundingClientRect().left
+    const screenWidth = document.documentElement.clientWidth
+    return Math.min(Math.max(left, SCREEN_MARGIN - plotLeft), screenWidth - SCREEN_MARGIN - plotLeft - width)
   }
 
   #indexAt(clientX) {
