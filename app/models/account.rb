@@ -79,7 +79,14 @@ class Account < ApplicationRecord
     end
 
     def save_plaid_transaction(plaid_transaction)
-      transactions.find_or_initialize_by(plaid_transaction_id: plaid_transaction.transaction_id).update!(
+      record = transactions.find_or_initialize_by(plaid_transaction_id: plaid_transaction.transaction_id)
+      # When a pending charge posts, Plaid sends the posted one as a new transaction (and removes the
+      # pending one), so carry over a category the user chose for the pending version.
+      if record.new_record? && plaid_transaction.pending_transaction_id
+        record.category_override = transactions.find_by(plaid_transaction_id: plaid_transaction.pending_transaction_id)&.category_override
+      end
+
+      record.update!(
         amount: plaid_transaction.amount,
         currency_code: plaid_transaction.iso_currency_code,
         merchant_name: plaid_transaction.merchant_name,

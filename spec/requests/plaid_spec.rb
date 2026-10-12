@@ -10,14 +10,14 @@ RSpec.describe "Connecting accounts with Plaid", type: :request do
   describe "POST /plaid/link_tokens" do
     before { allow(api).to receive(:link_token_create).and_return(Plaid::LinkTokenCreateResponse.new(link_token: "link-sandbox-1")) }
 
-    it "creates a bank link token with Transactions, 90 days of history and bank/card filters" do
+    it "creates a bank link token with Transactions, 2 years of history and bank/card filters" do
       post plaid_link_tokens_path, params: { kind: "bank" }, as: :json
 
       expect(response.parsed_body).to eq("link_token" => "link-sandbox-1")
       expect(api).to have_received(:link_token_create) do |request|
         expect(request.products).to eq([ "transactions" ])
         expect(request.optional_products).to eq([ "liabilities" ])
-        expect(request.transactions.days_requested).to eq(90)
+        expect(request.transactions.days_requested).to eq(730)
         expect(request.account_filters.depository.account_subtypes).to eq([ "all" ])
         expect(request.account_filters.credit.account_subtypes).to eq([ "credit card" ])
         expect(request.account_filters.investment).to be_nil

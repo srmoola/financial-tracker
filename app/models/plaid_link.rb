@@ -5,7 +5,7 @@
 # understands (see NetWorthBreakdown).
 module PlaidLink
   KINDS = %w[ bank investment ].freeze
-  TRANSACTION_HISTORY_DAYS = 90
+  TRANSACTION_HISTORY_DAYS = 730 # Plaid's maximum; it can't be raised for a connection later
 
   def self.create_token(user:, kind:)
     request =

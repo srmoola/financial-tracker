@@ -28,4 +28,24 @@ class TransactionsController < ApplicationController
       .order(date: :desc, datetime: :desc, created_at: :desc, id: :desc)
       .offset((@page - 1) * PER_PAGE).limit(PER_PAGE)
   end
+
+  # Changes a transaction's category (or resets it to Plaid's), then re-renders the page in place.
+  def update
+    transaction = Transaction.owned_by(Current.user).find(params[:id])
+    category = params[:category].presence
+    category = nil if category == transaction.category # picking Plaid's own category is a reset
+
+    if transaction.update(category_override: category)
+      redirect_to return_path, status: :see_other
+    else
+      head :unprocessable_content
+    end
+  end
+
+  private
+    # Back to the same range, filter and page the change was made from.
+    def return_path
+      path = params[:return_to].to_s
+      path.start_with?("/transactions") ? path : transactions_path
+    end
 end

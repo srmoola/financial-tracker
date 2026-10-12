@@ -19,7 +19,7 @@
 
   <%# Everything below updates in place (range, category, page) without reloading the page. %>
   <%= turbo_frame_tag "transactions_content", class: "block transition-opacity aria-busy:opacity-60",
-        data: { turbo_action: "advance", controller: "frame-scroll", action: "turbo:click->frame-scroll#remember turbo:frame-render->frame-scroll#restore" } do %>
+        data: { turbo_action: "advance", controller: "frame-scroll recategorize", action: "turbo:click->frame-scroll#remember turbo:frame-render->frame-scroll#restore" } do %>
     <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
       <p class="text-sm font-medium text-base-content/70"><%= range_heading %></p>
       <nav class="tabs tabs-box tabs-sm" aria-label="Time range">
@@ -85,9 +85,24 @@
                         <span class="truncate"><%= transaction.merchant_name.presence || transaction.description %></span>
                         <% if transaction.pending %><span class="badge badge-sm badge-soft badge-warning shrink-0">Pending</span><% end %>
                       </p>
-                      <p class="truncate text-xs text-base-content/60">
-                        <%= SpendingBreakdown.label_for(transaction.category) %> · <%= account.name %><%= " •••• #{account.mask}" if account.mask.present? %>
-                      </p>
+                      <div class="flex min-w-0 items-center gap-1 text-xs text-base-content/60">
+                        <% category_label = SpendingBreakdown.label_for(transaction.effective_category) %>
+                        <button type="button"
+                                class="-ml-1.5 inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-md px-1.5 py-0.5 font-medium text-base-content/80 transition-colors hover:bg-base-200"
+                                aria-label="Category: <%= category_label %><%= " (changed by you)" if transaction.recategorized? %>. Change category"
+                                data-action="recategorize#open"
+                                data-recategorize-url-param="<%= transaction_path(transaction) %>"
+                                data-recategorize-merchant-param="<%= transaction.merchant_name.presence || transaction.description %>"
+                                data-recategorize-amount-param="<%= number_to_currency(transaction.amount.abs) %>"
+                                data-recategorize-category-param="<%= transaction.effective_category %>"
+                                data-recategorize-plaid-category-param="<%= transaction.category %>"
+                                data-recategorize-plaid-label-param="<%= SpendingBreakdown.label_for(transaction.category) %>">
+                          <%= category_label %>
+                          <% if transaction.recategorized? %><span class="size-1.5 rounded-full bg-secondary" aria-hidden="true"></span><% end %>
+                          <svg class="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                        </button>
+                        <span class="truncate">· <%= account.name %><%= " •••• #{account.mask}" if account.mask.present? %></span>
+                      </div>
                     </div>
                     <p class="flex-none font-semibold tabular-nums">
                       <% if transaction.amount.negative? %>+<%= number_to_currency(transaction.amount.abs) %><% else %><%= number_to_currency(transaction.amount) %><% end %>
@@ -125,6 +140,33 @@
           <% end %>
         </div>
       </section>
+
+      <%# One shared category picker; each transaction's category button fills it in. %>
+      <dialog class="modal modal-bottom sm:modal-middle" aria-labelledby="recategorize-heading" data-recategorize-target="dialog">
+        <div class="modal-box">
+          <h3 id="recategorize-heading" class="text-lg font-bold tracking-tight">Change category</h3>
+          <p class="mt-1 text-sm text-base-content/60">
+            <span data-recategorize-target="merchant"></span> · <span class="tabular-nums" data-recategorize-target="amount"></span>
+          </p>
+
+          <%= form_with url: transactions_path, method: :patch, data: { recategorize_target: "form" } do %>
+            <input type="hidden" name="return_to" data-recategorize-target="returnTo">
+            <div class="mt-5 grid grid-cols-2 gap-2">
+              <% Transaction::CATEGORIES.each do |category| %>
+                <button type="submit" name="category" value="<%= category %>" class="btn btn-sm justify-start font-medium" data-recategorize-target="option">
+                  <%= SpendingBreakdown.label_for(category) %>
+                </button>
+              <% end %>
+            </div>
+            <button type="submit" name="category" value="" class="btn btn-ghost btn-sm mt-3 px-2" data-recategorize-target="reset" hidden>Reset to Plaid's category (<span data-recategorize-target="plaidCategory"></span>)</button>
+          <% end %>
+
+          <div class="modal-action mt-4">
+            <button type="button" class="btn" data-action="recategorize#close">Cancel</button>
+          </div>
+        </div>
+        <form method="dialog" class="modal-backdrop"><button aria-label="Close">close</button></form>
+      </dialog>
     <% end %>
   <% end %>
 <% end %>

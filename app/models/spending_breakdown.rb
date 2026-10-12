@@ -9,6 +9,7 @@ class SpendingBreakdown
   end
 
   MAX_NAMED_CATEGORIES = 5
+  # Spending is grouped by each transaction's effective category (the user's choice, else Plaid's).
   LABELS = {
     "FOOD_AND_DRINK" => "Food & drink",
     "GENERAL_MERCHANDISE" => "Shopping",
@@ -20,7 +21,8 @@ class SpendingBreakdown
     "LOAN_PAYMENTS" => "Loan payments",
     "BANK_FEES" => "Bank fees",
     "TRANSFER_IN" => "Transfers in",
-    "TRANSFER_OUT" => "Transfers out"
+    "TRANSFER_OUT" => "Transfers out",
+    "INCOME" => "Income"
   }.freeze
 
   attr_reader :categories, :total, :purchase_count
@@ -28,8 +30,8 @@ class SpendingBreakdown
   # `transactions` is a Transaction relation (already limited to the accounts and dates wanted).
   def initialize(transactions)
     purchases = transactions.where("amount > 0")
-    totals = purchases.group(:category).sum(:amount)
-    counts = purchases.group(:category).count
+    totals = purchases.group(Arel.sql(Transaction::EFFECTIVE_CATEGORY_SQL)).sum(:amount)
+    counts = purchases.group(Arel.sql(Transaction::EFFECTIVE_CATEGORY_SQL)).count
 
     named, rest = totals.sort_by { |category, total| [ -total, category.to_s ] }.partition.with_index { |_, index| index < MAX_NAMED_CATEGORIES }
     @categories = named.map { |category, total| Category.new(key: category, label: self.class.label_for(category), total:, count: counts[category]) }
@@ -52,14 +54,16 @@ class SpendingBreakdown
   # Narrows `transactions` to one slice's category (given as its param).
   # "other" is everything without a slice of its own.
   def filter(transactions, param)
+    category = Transaction::EFFECTIVE_CATEGORY_SQL
     named = categories.map(&:key) - [ :other ]
 
     case param
     when "other"
-      others = transactions.where.not(category: named.compact)
-      named.include?(nil) ? others : others.or(transactions.where(category: nil))
-    when "uncategorized" then transactions.where(category: nil)
-    else transactions.where(category: param)
+      known = named.compact
+      others = known.any? ? transactions.where("#{category} NOT IN (?)", known) : transactions.where("#{category} IS NOT NULL")
+      named.include?(nil) ? others : others.or(transactions.where("#{category} IS NULL"))
+    when "uncategorized" then transactions.where("#{category} IS NULL")
+    else transactions.where("#{category} = ?", param)
     end
   end
 
