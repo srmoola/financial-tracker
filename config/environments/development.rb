@@ -28,9 +28,8 @@ Rails.application.configure do
   # Change to :null_store to avoid any caching.
   config.cache_store = :memory_store
 
-  # Use Solid Queue for Active Job, backed by the queue database (see config/database.yml).
+  # Use Solid Queue for Active Job; its tables live in the main database.
   config.active_job.queue_adapter = :solid_queue
-  config.solid_queue.connects_to = { database: { writing: :queue } }
 
   # Open the Mission Control - Jobs dashboard (/jobs) without HTTP basic auth in development.
   config.mission_control.jobs.http_basic_auth_enabled = false
