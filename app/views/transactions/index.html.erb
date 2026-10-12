@@ -51,19 +51,21 @@
       </div>
 
       <div class="mt-6">
-        <%= render "spending_history", history: @spending_history, spending: @spending, view: @spending_view, selected: @category, range: @range, chart_range: @chart_range %>
+        <%= render "spending_history", history: @spending_history, spending: @spending, view: @spending_view, range: @range, chart_range: @chart_range, list_category: @category %>
       </div>
 
       <section class="card mt-6 border border-base-300 bg-base-100" aria-labelledby="transactions-heading">
         <div class="card-body gap-0 p-0">
           <div class="flex flex-col gap-2 px-6 pt-6 pb-3 sm:flex-row sm:items-center sm:justify-between sm:px-8">
-            <div class="flex flex-wrap items-center gap-2">
+            <div class="flex flex-wrap items-center gap-3">
               <h2 id="transactions-heading" class="scroll-mt-4 text-lg font-bold tracking-tight">Transactions</h2>
-              <% if category_label %>
-                <%= link_to transactions_path(range: @range, spending_view: @spending_view, chart_range: @chart_range), class: "badge badge-lg gap-1 border-base-300 bg-base-200 font-medium hover:bg-base-300", aria: { label: "Clear the #{category_label} filter" } do %>
-                  <%= category_label %>
-                  <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
-                <% end %>
+              <%= form_with url: transactions_path, method: :get, data: { controller: "auto-submit" } do |form| %>
+                <%= form.hidden_field :range, value: @range %>
+                <%= form.hidden_field :spending_view, value: @spending_view %>
+                <%= form.hidden_field :chart_range, value: @chart_range %>
+                <%= form.select :category, options_for_select(@category_options, @category), { include_blank: "All categories" },
+                      class: class_names("select select-sm w-auto", "select-primary": @category), aria: { label: "Filter by category" },
+                      data: { action: "auto-submit#submit" } %>
               <% end %>
             </div>
             <p class="text-sm text-base-content/60">

@@ -1,11 +1,11 @@
 import { Controller } from "@hotwired/stimulus"
 
 // Hovering or focusing a donut slice (or its legend row) highlights both and
-// shows that slice's value in the middle of the donut. A selected slice (e.g.
-// the category the list is filtered to) stays highlighted when nothing is
-// hovered; clicking a slice follows its legend row's link.
+// shows that slice's value in the middle of the donut. Clicking one selects it
+// (clicking again unselects it): it stays highlighted when nothing is hovered,
+// and its action (e.g. a link to its transactions) shows in place of the prompt.
 export default class extends Controller {
-  static targets = ["segment", "item", "label", "value", "detail"]
+  static targets = ["segment", "item", "label", "value", "detail", "prompt", "action"]
   static values = { selected: { type: Number, default: -1 } }
 
   connect() {
@@ -14,7 +14,7 @@ export default class extends Controller {
       value: this.valueTarget.textContent,
       detail: this.detailTarget.textContent
     }
-    this.reset()
+    this.selectedValueChanged()
   }
 
   show({ params: { index } }) {
@@ -32,7 +32,16 @@ export default class extends Controller {
   }
 
   select({ params: { index } }) {
-    this.itemTargets[index]?.click()
+    this.selectedValue = this.selectedValue === index ? -1 : index
+  }
+
+  selectedValueChanged() {
+    if (!this.defaults) return // before connect()
+
+    this.reset()
+    this.itemTargets.forEach((row, i) => row.hasAttribute("aria-pressed") && row.setAttribute("aria-pressed", i === this.selectedValue))
+    this.actionTargets.forEach((action, i) => (action.hidden = i !== this.selectedValue))
+    if (this.hasPromptTarget) this.promptTarget.hidden = this.selectedValue >= 0
   }
 
   #highlight(index) {

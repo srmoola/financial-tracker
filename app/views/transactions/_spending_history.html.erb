@@ -1,12 +1,11 @@
-<%# locals: (history:, spending:, view:, selected:, range:, chart_range:) %>
+<%# locals: (history:, spending:, view:, range:, chart_range:, list_category: nil) %>
+<%# Spending over time, for every category (the list's category filter doesn't apply).
+    `range` and `list_category` are the list's, kept in this chart's links. %>
 <% points = history.points %>
 <% categories = spending.categories %>
 <% colors = categories.zip(spending_colors(categories)).to_h { |category, color| [ category.key, color ] } %>
-<% selected_category = categories.find { |category| category.param == selected } %>
 <% series =
-     if selected_category
-       [ LineChartHelper::Series.new(key: selected_category.key, label: selected_category.label, color: colors.fetch(selected_category.key), values: points.map { |point| point.by_category[selected_category.key].to_f }) ]
-     elsif view == "categories"
+     if view == "categories"
        categories.map { |category| LineChartHelper::Series.new(key: category.key, label: category.label, color: colors.fetch(category.key), values: points.map { |point| point.by_category[category.key].to_f }) }
      else
        [ LineChartHelper::Series.new(key: :total, label: "Spending", color: "#111112", values: points.map { |point| point.total.to_f }) ]
@@ -25,20 +24,20 @@
       <div>
         <h2 id="spending-over-time-heading" class="text-lg font-bold tracking-tight">Spending over time</h2>
         <p class="text-sm text-base-content/60">
-          <%= description %><%= " since #{points.first.date.strftime(points.first.date.year == Date.current.year ? "%b %-d" : "%b %-d, %Y")}" if history.daily? %><%= " · #{selected_category.label} only" if selected_category %>
+          <%= description %><%= " since #{points.first.date.strftime(points.first.date.year == Date.current.year ? "%b %-d" : "%b %-d, %Y")}" if history.daily? %>
         </p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
-        <% unless selected_category || history.empty? %>
+        <% unless history.empty? %>
           <nav class="tabs tabs-box tabs-sm" aria-label="Spending chart lines">
             <% [ [ "total", "Total" ], [ "categories", "By category" ] ].each do |key, label| %>
-              <%= link_to label, transactions_path(range:, spending_view: key, chart_range:), class: class_names("tab", "tab-active": view == key), aria: { current: (view == key) || nil } %>
+              <%= link_to label, transactions_path(range:, category: list_category, spending_view: key, chart_range:), class: class_names("tab", "tab-active": view == key), aria: { current: (view == key) || nil } %>
             <% end %>
           </nav>
         <% end %>
         <nav class="tabs tabs-box tabs-sm" aria-label="Spending chart time range">
           <% TransactionsController::RANGES.each do |key, label| %>
-            <%= link_to label, transactions_path(range:, category: selected, spending_view: view, chart_range: key), class: class_names("tab", "tab-active": key == chart_range), aria: { current: (key == chart_range) || nil } %>
+            <%= link_to label, transactions_path(range:, category: list_category, spending_view: view, chart_range: key), class: class_names("tab", "tab-active": key == chart_range), aria: { current: (key == chart_range) || nil } %>
           <% end %>
         </nav>
       </div>
@@ -62,7 +61,7 @@
 
       <% chart = line_chart(points.map(&:date), series, tooltip_rows:, hover_labels: points.map(&:label), x_labels:) %>
       <%= render "shared/line_chart", chart:,
-            aria_label: "#{selected_category&.label || "Spending"}, #{description.downcase}, from #{points.first.label} (#{number_to_currency(series.first.values.first)}) to #{points.last.label} (#{number_to_currency(series.first.values.last)}). Use the left and right arrow keys to read each value, and Enter to see its largest purchases.",
+            aria_label: "Spending, #{description.downcase}, from #{points.first.label} (#{number_to_currency(series.first.values.first)}) to #{points.last.label} (#{number_to_currency(series.first.values.last)}). Use the left and right arrow keys to read each value, and Enter to see its largest purchases.",
             details: points.map { |point| render("point_purchases", point:, daily: history.daily?) },
             details_hint: "Click to see the top purchases" %>
 
