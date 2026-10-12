@@ -10,6 +10,9 @@ RSpec.describe "Transactions page", type: :request do
     account.transactions.create!(plaid_transaction_id: SecureRandom.hex(6), amount:, date:, merchant_name: merchant, category:, pending:)
   end
 
+  # The page without the spending chart's popovers, which list purchases from the chart's own range.
+  def body_outside_chart = response.body.gsub(%r{<template data-line-chart-target="detail".*?</template>}m, "")
+
   before { sign_in_as users(:one) }
 
   it "asks to connect a credit card when there are none" do
@@ -36,7 +39,7 @@ RSpec.describe "Transactions page", type: :request do
         get transactions_path
 
         expect(response.body).to include("This month, since Sep 17", "After Statement", "$12.50")
-        expect(response.body).not_to include("Last Statement")
+        expect(body_outside_chart).not_to include("Last Statement")
       end
     end
 
@@ -49,7 +52,7 @@ RSpec.describe "Transactions page", type: :request do
         get transactions_path(range: "3m")
 
         expect(response.body).to include("Your last 3 statements and this month, since Jun 16", "Start Of Range")
-        expect(response.body).not_to include("Before Range")
+        expect(body_outside_chart).not_to include("Before Range")
       end
     end
 
@@ -77,7 +80,7 @@ RSpec.describe "Transactions page", type: :request do
         get transactions_path
 
         expect(response.body).to include("since Oct 1", "October Purchase")
-        expect(response.body).not_to include("September Purchase")
+        expect(body_outside_chart).not_to include("September Purchase")
       end
     end
 
@@ -101,7 +104,7 @@ RSpec.describe "Transactions page", type: :request do
 
     expect(response.body).to include("Spending", "$92.50", "2 purchases", "Food &amp; drink", "Travel")
     expect(response.body).to include("Coffee Shop", "Airline", "Pending", "+$200.00", "Rewards Card •••• 3333", "Showing 1–3 of 3")
-    expect(response.body).not_to include("Old Purchase")
+    expect(body_outside_chart).not_to include("Old Purchase")
 
     get transactions_path(range: "3m")
     expect(response.body).to include("Old Purchase", "$999.00")
@@ -174,6 +177,14 @@ RSpec.describe "Transactions page", type: :request do
       get transactions_path(range: "1y", spending_view: "categories")
       expect(response.body.scan('data-line-chart-target="dot"').size).to eq(2)
       expect(response.body).to include('aria-label="Legend"')
+    end
+
+    it "lists each point's top purchases for its popover" do
+      get transactions_path(chart_range: "6m")
+
+      expect(response.body).to include("Click to see the top purchases", 'data-line-chart-target="popover"')
+      period = response.body[/<template data-line-chart-target="detail" data-index="5">.*?<\/template>/m]
+      expect(period).to include("Aug 16 – Sep 15", "1 purchase", "Coffee", "Food &amp; drink · Aug 20", "$30.00")
     end
 
     it "charts just the selected category when the list is filtered" do

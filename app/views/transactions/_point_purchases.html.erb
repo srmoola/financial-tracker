@@ -1,0 +1,21 @@
+<%# locals: (point:, daily:) %>
+<%# The largest purchases behind one point on the spending chart, shown in its popover. %>
+<p class="pr-6 text-xs text-base-content/60"><%= point.label %></p>
+<% if point.top_purchases.empty? %>
+  <p class="mt-1 text-sm text-base-content/70">No purchases <%= daily ? "this day" : "this statement month" %>.</p>
+<% else %>
+  <p class="text-sm font-semibold">
+    <%= point.purchase_count > point.top_purchases.size ? "Top #{point.top_purchases.size} of #{point.purchase_count} purchases" : pluralize(point.purchase_count, "purchase") %>
+  </p>
+  <ol class="mt-2 flex flex-col gap-2">
+    <% point.top_purchases.each do |transaction| %>
+      <li class="flex items-start gap-3 text-sm">
+        <div class="min-w-0 flex-1">
+          <p class="truncate font-medium"><%= transaction.merchant_name.presence || transaction.description %></p>
+          <p class="truncate text-xs text-base-content/60"><%= [ SpendingBreakdown.label_for(transaction.effective_category), (transaction.date.strftime("%b %-d") unless daily) ].compact.join(" · ") %></p>
+        </div>
+        <p class="flex-none font-semibold tabular-nums"><%= number_to_currency(transaction.amount) %></p>
+      </li>
+    <% end %>
+  </ol>
+<% end %>

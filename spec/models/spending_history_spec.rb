@@ -68,6 +68,29 @@ RSpec.describe SpendingHistory do
     expect(result.points.first.label).to eq("Jun 16 – Jul 15")
   end
 
+  it "keeps each day's largest purchases, biggest first" do
+    6.times { |index| spend(10 + index, Date.new(2026, 10, 2)) }
+    spend(99, Date.new(2026, 10, 3))
+
+    by_date = history(0).points.index_by(&:date)
+
+    expect(by_date[Date.new(2026, 10, 2)].purchase_count).to eq(6)
+    expect(by_date[Date.new(2026, 10, 2)].top_purchases.map(&:amount)).to eq([ 15, 14, 13, 12, 11 ])
+    expect(by_date[Date.new(2026, 10, 3)].top_purchases.map(&:amount)).to eq([ 99 ])
+    expect(by_date[Date.new(2026, 10, 4)]).to have_attributes(purchase_count: 0, top_purchases: [])
+  end
+
+  it "keeps each statement period's largest purchases" do
+    spend(30, Date.new(2026, 8, 16))
+    spend(20, Date.new(2026, 9, 15))
+    spend(7, Date.new(2026, 9, 16))
+
+    points = history(6).points
+
+    expect(points[-2].top_purchases.map(&:amount)).to eq([ 30, 20 ])
+    expect(points[-1].top_purchases.map(&:amount)).to eq([ 7 ])
+  end
+
   it "is empty without purchases" do
     expect(history(0)).to be_empty
   end
