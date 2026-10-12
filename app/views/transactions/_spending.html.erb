@@ -1,25 +1,32 @@
-<%# locals: (spending:, range_label:) %>
+<%# locals: (spending:, range:, range_text:, selected:) %>
 <% categories = spending.categories %>
 <% segments = donut_segments(categories.map { |category| category.total.to_f }, colors: spending_colors(categories), radius: 80) %>
 <% total_label = number_to_currency(spending.total) %>
+<% selected_index = categories.index { |category| category.param == selected } || -1 %>
 
-<section class="card border border-base-300 bg-base-100" data-controller="donut" aria-labelledby="spending-heading">
+<section class="card border border-base-300 bg-base-100" aria-labelledby="spending-heading"
+         data-controller="donut" data-donut-selected-value="<%= selected_index %>">
   <div class="card-body gap-6 p-6 sm:p-8">
-    <h2 id="spending-heading" class="text-lg font-bold tracking-tight">Spending</h2>
+    <div>
+      <h2 id="spending-heading" class="text-lg font-bold tracking-tight">Spending</h2>
+      <% if categories.any? %>
+        <p class="text-sm text-base-content/60">Click a category to see its transactions.</p>
+      <% end %>
+    </div>
 
     <% if categories.empty? %>
-      <p class="py-6 text-center text-base-content/60">No credit card purchases in the last <%= range_label %>.</p>
+      <p class="py-6 text-center text-base-content/60">No credit card purchases <%= range_text %>.</p>
     <% else %>
       <div class="flex flex-col items-center gap-8">
         <div class="relative size-64 sm:size-72">
           <svg viewBox="0 0 200 200" class="size-full" role="img"
-               aria-label="<%= "Spending #{total_label} in the last #{range_label}: " + categories.zip(segments).map { |category, segment| "#{category.label} #{number_to_currency(category.total)} (#{number_to_percentage(segment.share * 100, precision: 0)})" }.join(", ") %>">
+               aria-label="<%= "Spending #{total_label} #{range_text}: " + categories.zip(segments).map { |category, segment| "#{category.label} #{number_to_currency(category.total)} (#{number_to_percentage(segment.share * 100, precision: 0)})" }.join(", ") %>">
             <g transform="rotate(-90 100 100)">
               <% categories.zip(segments).each_with_index do |(category, segment), index| %>
-                <g class="cursor-pointer outline-none transition-opacity duration-150" tabindex="0"
-                   aria-label="<%= category.label %>: <%= number_to_currency(category.total) %>"
+                <g class="cursor-pointer outline-none transition-opacity duration-150" tabindex="0" role="button"
+                   aria-label="Show <%= category.label %> transactions (<%= number_to_currency(category.total) %>)"
                    data-donut-target="segment"
-                   data-action="mouseenter->donut#show focus->donut#show mouseleave->donut#reset blur->donut#reset"
+                   data-action="mouseenter->donut#show focus->donut#show mouseleave->donut#reset blur->donut#reset click->donut#select keydown.enter->donut#select"
                    data-donut-index-param="<%= index %>">
                   <circle cx="100" cy="100" r="80" fill="none" stroke="<%= segment.color %>" stroke-width="24"
                           stroke-dasharray="<%= segment.dasharray %>" stroke-dashoffset="<%= segment.dashoffset %>" />
@@ -39,22 +46,29 @@
           </div>
         </div>
 
-        <ul class="grid w-full max-w-2xl gap-x-6 sm:grid-cols-2">
+        <ul class="grid w-full max-w-2xl gap-x-6 gap-y-1 sm:grid-cols-2">
           <% categories.zip(segments).each_with_index do |(category, segment), index| %>
             <% share = number_to_percentage(segment.share * 100, precision: 1) %>
-            <li class="flex cursor-default items-center gap-3 rounded-lg px-3 py-2.5 transition-colors"
-                data-donut-target="item"
-                data-action="mouseenter->donut#show mouseleave->donut#reset"
-                data-donut-index-param="<%= index %>"
-                data-label="<%= category.label %>"
-                data-value="<%= number_to_currency(category.total) %>"
-                data-detail="<%= pluralize(category.count, "purchase") %> · <%= share %>">
-              <span class="size-3 shrink-0 rounded-sm" style="background-color: <%= segment.color %>" aria-hidden="true"></span>
-              <span class="min-w-0 flex-1 truncate font-medium"><%= category.label %></span>
-              <span class="text-right">
-                <span class="block font-semibold tabular-nums"><%= number_to_currency(category.total) %></span>
-                <span class="block text-xs tabular-nums text-base-content/60"><%= share %></span>
-              </span>
+            <% active = category.param == selected %>
+            <li>
+              <%= link_to transactions_path(range:, category: (category.param unless active)),
+                    class: class_names("flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-base-200", "ring-1 ring-base-content/20": active),
+                    aria: { current: active || nil, label: active ? "Show all categories" : "Show #{category.label} transactions" },
+                    data: {
+                      donut_target: "item",
+                      action: "mouseenter->donut#show mouseleave->donut#reset",
+                      donut_index_param: index,
+                      label: category.label,
+                      value: number_to_currency(category.total),
+                      detail: "#{pluralize(category.count, "purchase")} · #{share}"
+                    } do %>
+                <span class="size-3 shrink-0 rounded-sm" style="background-color: <%= segment.color %>" aria-hidden="true"></span>
+                <span class="min-w-0 flex-1 truncate font-medium"><%= category.label %></span>
+                <span class="text-right">
+                  <span class="block font-semibold tabular-nums"><%= number_to_currency(category.total) %></span>
+                  <span class="block text-xs tabular-nums text-base-content/60"><%= share %></span>
+                </span>
+              <% end %>
             </li>
           <% end %>
         </ul>

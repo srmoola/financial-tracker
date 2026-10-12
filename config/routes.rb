@@ -7,7 +7,9 @@ Rails.application.routes.draw do
   # Connecting accounts with Plaid Link
   resources :accounts, only: :index
   resources :plaid_link_tokens, only: :create, path: "plaid/link_tokens"
-  resources :plaid_items, only: :create
+  resources :plaid_items, only: :create do
+    post :statement_dates, on: :member
+  end
 
   # App sections that aren't built yet. Each gets a placeholder page until its real controller exists.
   resources :transactions, only: :index

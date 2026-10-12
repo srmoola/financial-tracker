@@ -16,6 +16,17 @@ class Account < ApplicationRecord
   # Plaid's current balance; for credit cards, the amount owed.
   def balance = current_balance || 0
 
+  # The first day of this card's current statement period: the day after its
+  # last statement (moved forward a month at a time if that date is stale), or
+  # the 1st of the month when Plaid hasn't provided a statement date.
+  def current_statement_start(today: Date.current)
+    return today.beginning_of_month if last_statement_issue_date.nil?
+
+    start = last_statement_issue_date + 1
+    start = start.next_month while start.next_month <= today
+    start
+  end
+
   # Saves today's balance (replacing an earlier one from the same day).
   def record_balance_snapshot(on:)
     return if current_balance.nil?

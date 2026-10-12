@@ -26,40 +26,106 @@ RSpec.describe "Transactions page", type: :request do
     expect(response.body).to include("Your transactions are on the way")
   end
 
-  it "shows spending by category and the list of transactions for the last month by default" do
+  describe "This month (the default)" do
+    it "covers the current statement period of each card" do
+      travel_to Date.new(2026, 10, 12) do
+        card.update!(last_statement_issue_date: Date.new(2026, 9, 16))
+        add_transaction(amount: 12.5, merchant: "After Statement", date: Date.new(2026, 9, 17))
+        add_transaction(amount: 99, merchant: "Last Statement", date: Date.new(2026, 9, 16))
+
+        get transactions_path
+
+        expect(response.body).to include("This month, since Sep 17", "After Statement", "$12.50")
+        expect(response.body).not_to include("Last Statement")
+      end
+    end
+
+    it "starts on the 1st for cards without a statement date" do
+      travel_to Date.new(2026, 10, 12) do
+        add_transaction(amount: 5, merchant: "October Purchase", date: Date.new(2026, 10, 1))
+        add_transaction(amount: 5, merchant: "September Purchase", date: Date.new(2026, 9, 30))
+
+        get transactions_path
+
+        expect(response.body).to include("since Oct 1", "October Purchase")
+        expect(response.body).not_to include("September Purchase")
+      end
+    end
+
+    it "prompts to enable statement dates for connections that need consent" do
+      card
+      item.update!(statement_dates_status: "needs_consent")
+
+      get transactions_path
+
+      expect(response.body).to include("Enable statement dates", "First Platypus Bank statement", item.id)
+    end
+  end
+
+  it "shows spending by category and the list for a fixed range" do
     add_transaction(amount: 12.5, merchant: "Coffee Shop")
     add_transaction(amount: 80, merchant: "Airline", category: "TRAVEL", pending: true)
     add_transaction(amount: -200, merchant: nil, category: "LOAN_PAYMENTS")
     add_transaction(amount: 999, merchant: "Old Purchase", date: 2.months.ago.to_date)
 
-    get transactions_path
+    get transactions_path(range: "1m")
 
     expect(response.body).to include("Spending", "$92.50", "2 purchases", "Food &amp; drink", "Travel")
-    expect(response.body).to include("Coffee Shop", "Airline", "Pending", "+$200.00", "Rewards Card •••• 3333", "3 transactions in the last month")
+    expect(response.body).to include("Coffee Shop", "Airline", "Pending", "+$200.00", "Rewards Card •••• 3333", "Showing 1–3 of 3")
     expect(response.body).not_to include("Old Purchase")
-  end
-
-  it "includes older transactions for a longer range" do
-    add_transaction(amount: 999, merchant: "Old Purchase", date: 2.months.ago.to_date)
 
     get transactions_path(range: "3m")
-
     expect(response.body).to include("Old Purchase", "$999.00")
   end
 
-  it "paginates 25 transactions per page, newest first" do
+  describe "filtering by category" do
+    before do
+      add_transaction(amount: 12.5, merchant: "Coffee Shop", category: "FOOD_AND_DRINK")
+      add_transaction(amount: 80, merchant: "Airline", category: "TRAVEL")
+      add_transaction(amount: 3, merchant: "Mystery", category: nil)
+    end
+
+    it "lists only that category and shows a chip to clear it" do
+      get transactions_path(range: "1m", category: "TRAVEL")
+
+      expect(response.body).to include("Airline", "Clear the Travel filter", "Showing 1–1 of 1")
+      expect(response.body).not_to include("Coffee Shop", "Mystery")
+      # The donut still shows every category, and the selected one links back to all.
+      expect(response.body).to include("Food &amp; drink", 'aria-label="Show all categories"')
+    end
+
+    it "supports uncategorized transactions" do
+      get transactions_path(range: "1m", category: "uncategorized")
+
+      expect(response.body).to include("Mystery")
+      expect(response.body).not_to include("Coffee Shop", "Airline")
+    end
+
+    it "lists everything without its own slice under Other" do
+      %w[ MEDICAL PERSONAL_CARE ENTERTAINMENT GENERAL_MERCHANDISE ].each_with_index do |category, index|
+        add_transaction(amount: 100 + index, merchant: "Big #{category}", category:)
+      end
+
+      get transactions_path(range: "1m", category: "other")
+
+      # Named slices: the five largest (four "Big" ones and Travel). Food and uncategorized fall into Other.
+      expect(response.body).to include("Coffee Shop", "Mystery")
+      expect(response.body).not_to include("Airline", "Big MEDICAL")
+    end
+  end
+
+  it "paginates 25 per page with numbered pages, newest first" do
     30.times { |days_ago| add_transaction(amount: 1, merchant: "Shop #{days_ago}", date: Date.current - days_ago) }
 
     get transactions_path(range: "3m")
-    expect(response.body).to include("Page 1 of 2", "Shop 0", "Shop 24")
+    expect(response.body).to include("Showing 1–25 of 30", "Shop 0", "Shop 24", 'aria-label="Page 2"', 'aria-label="Next page"')
     expect(response.body).not_to include("Shop 25")
 
     get transactions_path(range: "3m", page: 2)
-    expect(response.body).to include("Page 2 of 2", "Shop 25", "Shop 29")
-    expect(response.body).not_to include("Shop 24<")
+    expect(response.body).to include("Showing 26–30 of 30", "Shop 25", "Shop 29", 'aria-current="page"')
 
     get transactions_path(range: "3m", page: 99)
-    expect(response.body).to include("Page 2 of 2")
+    expect(response.body).to include("Showing 26–30 of 30")
   end
 
   it "never shows another user's transactions" do
@@ -68,17 +134,17 @@ RSpec.describe "Transactions page", type: :request do
       .accounts.create!(plaid_account_id: "card-2", name: "Their Card", account_type: "credit", subtype: "credit card")
     add_transaction(amount: 77, merchant: "Theirs", account: other_card)
 
-    get transactions_path
+    get transactions_path(range: "1m")
 
     expect(response.body).to include("Mine")
     expect(response.body).not_to include("Theirs", "$77.00")
   end
 
-  it "shows last month's spending on the dashboard card" do
+  it "shows this statement period's spending on the dashboard card" do
     add_transaction(amount: 42)
 
     get root_path
 
-    expect(response.body).to include("$42.00", "spent on credit cards in the last month")
+    expect(response.body).to include("$42.00", "spent on credit cards this statement period")
   end
 end

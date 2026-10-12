@@ -14,6 +14,7 @@ module PlaidLink
         Plaid::LinkTokenCreateRequest.new(
           **common_options(user),
           products: [ "transactions" ],
+          optional_products: [ "liabilities" ], # statement dates, where the bank supports them
           transactions: Plaid::LinkTokenTransactions.new(days_requested: TRANSACTION_HISTORY_DAYS),
           account_filters: Plaid::LinkTokenAccountFilters.new(
             depository: Plaid::DepositoryFilter.new(account_subtypes: [ "all" ]),
@@ -30,6 +31,18 @@ module PlaidLink
         )
       end
 
+    PlaidClient.api.link_token_create(request).link_token
+  end
+
+  # Link update mode for an existing connection, asking the user to also allow
+  # Liabilities so we can read their credit card statement dates. Reuses the
+  # connection, so it doesn't count as a new one.
+  def self.create_statement_dates_token(plaid_item)
+    request = Plaid::LinkTokenCreateRequest.new(
+      **common_options(plaid_item.user),
+      access_token: plaid_item.access_token,
+      additional_consented_products: [ "liabilities" ]
+    )
     PlaidClient.api.link_token_create(request).link_token
   end
 

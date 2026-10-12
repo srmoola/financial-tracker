@@ -3,7 +3,10 @@
 # payments and refunds aren't treated as spending. The largest categories get
 # their own slice; the rest are folded into "Other" to keep the donut readable.
 class SpendingBreakdown
-  Category = Data.define(:key, :label, :total, :count)
+  Category = Data.define(:key, :label, :total, :count) do
+    # How the category appears in URLs (?category=...).
+    def param = SpendingBreakdown.param_for(key)
+  end
 
   MAX_NAMED_CATEGORIES = 5
   LABELS = {
@@ -36,6 +39,28 @@ class SpendingBreakdown
 
     @total = totals.values.sum
     @purchase_count = counts.values.sum
+  end
+
+  def self.param_for(key)
+    case key
+    when :other then "other"
+    when nil then "uncategorized"
+    else key
+    end
+  end
+
+  # Narrows `transactions` to one slice's category (given as its param).
+  # "other" is everything without a slice of its own.
+  def filter(transactions, param)
+    named = categories.map(&:key) - [ :other ]
+
+    case param
+    when "other"
+      others = transactions.where.not(category: named.compact)
+      named.include?(nil) ? others : others.or(transactions.where(category: nil))
+    when "uncategorized" then transactions.where(category: nil)
+    else transactions.where(category: param)
+    end
   end
 
   def self.label_for(category)

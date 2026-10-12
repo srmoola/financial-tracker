@@ -76,6 +76,7 @@ RSpec.describe Account, "syncing transactions" do
       plaid_account(id: "checking-1", type: "depository", subtype: "checking", current: 500)
     ]))
     allow(api).to receive(:transactions_sync).and_return(plaid_sync_response)
+    allow(api).to receive(:liabilities_get).and_raise(plaid_api_error("NO_LIABILITY_ACCOUNTS"))
     card
 
     item.sync!

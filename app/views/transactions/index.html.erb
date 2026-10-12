@@ -1,16 +1,6 @@
 <% content_for :title, "Transactions · Financial Tracker" %>
-<% range_label = { "1m" => "month", "3m" => "3 months", "6m" => "6 months", "1y" => "year" }.fetch(@range) %>
 
-<div class="flex flex-wrap items-center justify-between gap-3">
-  <h1 class="text-3xl font-bold tracking-tight">Transactions</h1>
-  <% if @credit_cards.any? %>
-    <nav class="tabs tabs-box tabs-sm" aria-label="Time range">
-      <% NetWorthHistory::RANGES.each_key do |key| %>
-        <%= link_to key.upcase, transactions_path(range: key), class: class_names("tab", "tab-active": key == @range), aria: { current: (key == @range) || nil } %>
-      <% end %>
-    </nav>
-  <% end %>
-</div>
+<h1 class="text-3xl font-bold tracking-tight">Transactions</h1>
 
 <% if @credit_cards.empty? %>
   <section class="card mt-8 border border-base-300 bg-base-100">
@@ -22,72 +12,119 @@
       <%= render "plaid/connect_buttons", from: "accounts" %>
     </div>
   </section>
-<% elsif !@any_transactions %>
-  <section class="card mt-8 border border-dashed border-base-300 bg-base-100">
-    <div class="card-body items-center p-10 text-center">
-      <p class="font-semibold">Your transactions are on the way</p>
-      <p class="max-w-md text-sm text-base-content/60">They're imported when your accounts sync, which happens every morning and shortly after you connect a card.</p>
-    </div>
-  </section>
 <% else %>
-  <div class="mt-6">
-    <%= render "spending", spending: @spending, range_label: %>
-  </div>
+  <% range_text = @range == "statement" ? "this statement period" : "in the last #{{ "1m" => "month", "3m" => "3 months", "6m" => "6 months", "1y" => "year" }.fetch(@range)}" %>
+  <% range_heading = @range == "statement" ? "This month, #{statement_range_description(@credit_cards)}" : "The last #{{ "1m" => "month", "3m" => "3 months", "6m" => "6 months", "1y" => "year" }.fetch(@range)}" %>
+  <% category_label = @category && (@spending.categories.find { |category| category.param == @category }&.label || SpendingBreakdown.label_for(@category == "uncategorized" ? nil : @category)) %>
 
-  <section class="card mt-6 border border-base-300 bg-base-100" aria-labelledby="transactions-heading">
-    <div class="card-body gap-0 p-0">
-      <div class="flex flex-col gap-1 px-6 pt-6 pb-2 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3 sm:px-8">
-        <h2 id="transactions-heading" class="text-lg font-bold tracking-tight">All transactions</h2>
-        <p class="text-sm text-base-content/60"><%= pluralize(@total_count, "transaction") %> in the last <%= range_label %></p>
+  <%# Everything below updates in place (range, category, page) without reloading the page. %>
+  <%= turbo_frame_tag "transactions_content", class: "block transition-opacity aria-busy:opacity-60",
+        data: { turbo_action: "advance", controller: "frame-scroll", action: "turbo:click->frame-scroll#remember turbo:frame-render->frame-scroll#restore" } do %>
+    <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
+      <p class="text-sm font-medium text-base-content/70"><%= range_heading %></p>
+      <nav class="tabs tabs-box tabs-sm" aria-label="Time range">
+        <% TransactionsController::RANGES.each do |key, label| %>
+          <%= link_to label, transactions_path(range: key, category: @category), class: class_names("tab", "tab-active": key == @range), aria: { current: (key == @range) || nil } %>
+        <% end %>
+      </nav>
+    </div>
+
+    <% if @plaid_items_needing_consent.any? %>
+      <div class="mt-4 flex flex-col gap-3"><%= render "plaid/statement_dates_prompt", plaid_items: @plaid_items_needing_consent, from: "transactions" %></div>
+    <% end %>
+
+    <% if !@any_transactions %>
+      <section class="card mt-6 border border-dashed border-base-300 bg-base-100">
+        <div class="card-body items-center p-10 text-center">
+          <p class="font-semibold">Your transactions are on the way</p>
+          <p class="max-w-md text-sm text-base-content/60">They're imported when your accounts sync, which happens every morning and shortly after you connect a card.</p>
+        </div>
+      </section>
+    <% else %>
+      <div class="mt-4">
+        <%= render "spending", spending: @spending, range: @range, range_text:, selected: @category %>
       </div>
 
-      <% if @transactions.empty? %>
-        <p class="px-6 py-10 text-center text-base-content/60 sm:px-8">No transactions in the last <%= range_label %>.</p>
-      <% else %>
-        <% @transactions.group_by(&:date).each do |date, transactions_on_day| %>
-          <h3 class="border-b border-base-300 bg-base-200/60 px-6 py-2 text-xs font-semibold uppercase tracking-wide text-base-content/60 sm:px-8">
-            <%= date == Date.current ? "Today" : (date == Date.yesterday ? "Yesterday" : date.strftime("%a, %b %-d, %Y")) %>
-          </h3>
-          <ul class="divide-y divide-base-300">
-            <% transactions_on_day.each do |transaction| %>
-              <% account = transaction.account %>
-              <li class="flex items-center gap-4 px-6 py-3 sm:px-8">
-                <div class="grid size-10 shrink-0 place-items-center rounded-xl bg-base-200 text-sm font-semibold" aria-hidden="true">
-                  <%= (transaction.merchant_name.presence || transaction.description).to_s.first.upcase %>
-                </div>
-                <div class="min-w-0 flex-1">
-                  <p class="flex items-center gap-2 font-medium">
-                    <span class="truncate"><%= transaction.merchant_name.presence || transaction.description %></span>
-                    <% if transaction.pending %><span class="badge badge-sm badge-soft badge-warning shrink-0">Pending</span><% end %>
-                  </p>
-                  <p class="truncate text-xs text-base-content/60">
-                    <%= SpendingBreakdown.label_for(transaction.category) %> · <%= account.name %><%= " •••• #{account.mask}" if account.mask.present? %>
-                  </p>
-                </div>
-                <p class="flex-none font-semibold tabular-nums">
-                  <% if transaction.amount.negative? %>+<%= number_to_currency(transaction.amount.abs) %><% else %><%= number_to_currency(transaction.amount) %><% end %>
-                </p>
-              </li>
-            <% end %>
-          </ul>
-        <% end %>
-      <% end %>
+      <section class="card mt-6 border border-base-300 bg-base-100" aria-labelledby="transactions-heading">
+        <div class="card-body gap-0 p-0">
+          <div class="flex flex-col gap-2 px-6 pt-6 pb-3 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+            <div class="flex flex-wrap items-center gap-2">
+              <h2 id="transactions-heading" class="scroll-mt-4 text-lg font-bold tracking-tight">Transactions</h2>
+              <% if category_label %>
+                <%= link_to transactions_path(range: @range), class: "badge badge-lg gap-1 border-base-300 bg-base-200 font-medium hover:bg-base-300", aria: { label: "Clear the #{category_label} filter" } do %>
+                  <%= category_label %>
+                  <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+                <% end %>
+              <% end %>
+            </div>
+            <p class="text-sm text-base-content/60">
+              <% if @total_count.zero? %>
+                No transactions
+              <% else %>
+                Showing <%= (@page - 1) * TransactionsController::PER_PAGE + 1 %>–<%= [ @page * TransactionsController::PER_PAGE, @total_count ].min %> of <%= number_with_delimiter(@total_count) %>
+              <% end %>
+            </p>
+          </div>
 
-      <% if @page_count > 1 %>
-        <nav class="flex items-center justify-between gap-3 border-t border-base-300 px-6 py-4 sm:px-8" aria-label="Pagination">
-          <% if @page > 1 %>
-            <%= link_to "Newer", transactions_path(range: @range, page: @page - 1), class: "btn btn-sm" %>
+          <% if @transactions.empty? %>
+            <p class="border-t border-base-300 px-6 py-10 text-center text-base-content/60 sm:px-8">No <%= category_label ? "#{category_label} " : "" %>transactions <%= range_text %>.</p>
           <% else %>
-            <span class="btn btn-sm btn-disabled" aria-disabled="true">Newer</span>
+            <% @transactions.group_by(&:date).each do |date, transactions_on_day| %>
+              <h3 class="border-y border-base-300 bg-base-200/60 px-6 py-2 text-xs font-semibold uppercase tracking-wide text-base-content/60 sm:px-8">
+                <%= date == Date.current ? "Today" : (date == Date.yesterday ? "Yesterday" : date.strftime("%a, %b %-d, %Y")) %>
+              </h3>
+              <ul class="divide-y divide-base-300">
+                <% transactions_on_day.each do |transaction| %>
+                  <% account = transaction.account %>
+                  <li class="flex items-center gap-4 px-6 py-3 sm:px-8">
+                    <div class="grid size-10 shrink-0 place-items-center rounded-xl bg-base-200 text-sm font-semibold" aria-hidden="true">
+                      <%= (transaction.merchant_name.presence || transaction.description).to_s.first.upcase %>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                      <p class="flex items-center gap-2 font-medium">
+                        <span class="truncate"><%= transaction.merchant_name.presence || transaction.description %></span>
+                        <% if transaction.pending %><span class="badge badge-sm badge-soft badge-warning shrink-0">Pending</span><% end %>
+                      </p>
+                      <p class="truncate text-xs text-base-content/60">
+                        <%= SpendingBreakdown.label_for(transaction.category) %> · <%= account.name %><%= " •••• #{account.mask}" if account.mask.present? %>
+                      </p>
+                    </div>
+                    <p class="flex-none font-semibold tabular-nums">
+                      <% if transaction.amount.negative? %>+<%= number_to_currency(transaction.amount.abs) %><% else %><%= number_to_currency(transaction.amount) %><% end %>
+                    </p>
+                  </li>
+                <% end %>
+              </ul>
+            <% end %>
           <% end %>
-          <span class="text-sm text-base-content/60">Page <%= @page %> of <%= @page_count %></span>
-          <% if @page < @page_count %>
-            <%= link_to "Older", transactions_path(range: @range, page: @page + 1), class: "btn btn-sm" %>
-          <% else %>
-            <span class="btn btn-sm btn-disabled" aria-disabled="true">Older</span>
+
+          <% if @page_count > 1 %>
+            <% page_link = ->(number) { transactions_path(range: @range, category: @category, page: number) } %>
+            <nav class="flex justify-center border-t border-base-300 px-6 py-4" aria-label="Pagination">
+              <div class="join">
+                <% if @page > 1 %>
+                  <%= link_to "‹", page_link.(@page - 1), class: "join-item btn btn-sm", aria: { label: "Previous page" }, data: { scroll_to: "#transactions-heading" } %>
+                <% else %>
+                  <span class="join-item btn btn-sm btn-disabled" aria-hidden="true">‹</span>
+                <% end %>
+                <% page_window(@page, @page_count).each do |entry| %>
+                  <% if entry == :gap %>
+                    <span class="join-item btn btn-sm btn-disabled" aria-hidden="true">…</span>
+                  <% else %>
+                    <%= link_to entry, page_link.(entry), class: class_names("join-item btn btn-sm tabular-nums", "btn-active btn-primary": entry == @page),
+                          aria: { current: (entry == @page ? "page" : nil), label: "Page #{entry}" }, data: { scroll_to: "#transactions-heading" } %>
+                  <% end %>
+                <% end %>
+                <% if @page < @page_count %>
+                  <%= link_to "›", page_link.(@page + 1), class: "join-item btn btn-sm", aria: { label: "Next page" }, data: { scroll_to: "#transactions-heading" } %>
+                <% else %>
+                  <span class="join-item btn btn-sm btn-disabled" aria-hidden="true">›</span>
+                <% end %>
+              </div>
+            </nav>
           <% end %>
-        </nav>
-      <% end %>
-    </div>
-  </section>
+        </div>
+      </section>
+    <% end %>
+  <% end %>
 <% end %>

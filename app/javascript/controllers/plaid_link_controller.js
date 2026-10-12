@@ -21,9 +21,11 @@ function loadPlaidLink() {
 
 // Connects an account: gets a link token for the chosen kind of account, opens
 // Plaid Link, and sends the public token from a successful link to the server.
+// With an item id, it instead re-opens that existing connection (update mode)
+// so the user can allow statement dates; there's no token to exchange then.
 export default class extends Controller {
   static targets = ["button", "error"]
-  static values = { from: String }
+  static values = { from: String, itemId: String }
 
   async open({ params: { kind } }) {
     this.#setBusy(true)
@@ -31,11 +33,11 @@ export default class extends Controller {
 
     try {
       await loadPlaidLink()
-      const { link_token } = await this.#post("/plaid/link_tokens", { kind })
+      const { link_token } = await this.#post("/plaid/link_tokens", this.itemIdValue ? { plaid_item_id: this.itemIdValue } : { kind })
 
       window.Plaid.create({
         token: link_token,
-        onSuccess: (publicToken) => this.#connect(publicToken),
+        onSuccess: (publicToken) => (this.itemIdValue ? this.#allowStatementDates() : this.#connect(publicToken)),
         onExit: (error) => {
           this.#setBusy(false)
           if (error) this.#showError("The connection didn't finish. Please try again.")
@@ -48,8 +50,16 @@ export default class extends Controller {
   }
 
   async #connect(publicToken) {
+    await this.#finish("/plaid_items", { public_token: publicToken, from: this.fromValue })
+  }
+
+  async #allowStatementDates() {
+    await this.#finish(`/plaid_items/${this.itemIdValue}/statement_dates`, { from: this.fromValue })
+  }
+
+  async #finish(url, body) {
     try {
-      const { redirect_url } = await this.#post("/plaid_items", { public_token: publicToken, from: this.fromValue })
+      const { redirect_url } = await this.#post(url, body)
       Turbo.visit(redirect_url)
     } catch (error) {
       this.#setBusy(false)
