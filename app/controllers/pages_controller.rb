@@ -17,6 +17,8 @@ class PagesController < ApplicationController
     else
       @breakdown = NetWorthBreakdown.new(accounts)
       @history = NetWorthHistory.new(Current.user.balance_snapshots.includes(:account).where(date: start..))
+      last_month = Transaction.where(account: Current.user.accounts.credit_cards, date: NetWorthHistory.range_start("1m")..)
+      @spent_last_month = SpendingBreakdown.new(last_month).total
     end
   end
 end

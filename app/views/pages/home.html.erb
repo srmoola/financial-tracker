@@ -46,6 +46,9 @@
           <% if @sample %>
             <p class="mt-2 text-2xl font-bold tracking-tight"><%= highlight.stat %></p>
             <p class="text-sm text-base-content/60"><%= highlight.detail %></p>
+          <% elsif highlight.section == :transactions %>
+            <p class="mt-2 text-2xl font-bold tracking-tight"><%= number_to_currency(@spent_last_month) %></p>
+            <p class="text-sm text-base-content/60">spent on credit cards in the last month</p>
           <% else %>
             <p class="mt-2 text-sm text-base-content/60">Coming soon</p>
           <% end %>

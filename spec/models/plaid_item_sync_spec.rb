@@ -14,7 +14,9 @@ RSpec.describe PlaidItem, "connecting and syncing balances" do
       plaid_account(id: "acc-card", name: "Plaid Credit Card", type: "credit", subtype: "credit card", current: 410, available: 1590, limit: 2000)
     ]))
 
-    item = PlaidItem.connect!(user: users(:one), public_token: "public-sandbox-1")
+    item = nil
+    expect { item = PlaidItem.connect!(user: users(:one), public_token: "public-sandbox-1") }
+      .to have_enqueued_job(SyncPlaidItemJob).with(kind_of(PlaidItem))
 
     expect(api).to have_received(:item_public_token_exchange).with(having_attributes(public_token: "public-sandbox-1"))
     expect(item.reload).to have_attributes(item_id: "item-1", access_token: "access-sandbox-1", institution_name: "First Platypus Bank", institution_id: "ins_109508")
