@@ -76,3 +76,5 @@ end
 gem "tailwindcss-rails", "~> 4.6"
 
 gem "mission_control-jobs", "~> 1.3"
+
+gem "plaid", "~> 52.0"

@@ -2,6 +2,12 @@ Rails.application.routes.draw do
   resource :session
   resources :passwords, param: :token
   resource :sign_up, only: %i[ show create ]
+  resource :onboarding, only: :show, controller: "onboarding"
+
+  # Connecting accounts with Plaid Link
+  resources :accounts, only: :index
+  resources :plaid_link_tokens, only: :create, path: "plaid/link_tokens"
+  resources :plaid_items, only: :create
 
   # App sections that aren't built yet. Each gets a placeholder page until its real controller exists.
   %w[ transactions budgets subscriptions taxes ].each do |section|

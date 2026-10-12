@@ -26,5 +26,8 @@ class NetWorthHistory
   end
 
   def change = points.last.net_worth - points.first.net_worth
-  def change_percent = change / points.first.net_worth * 100
+  # Nil when there's no starting value to compare against.
+  def change_percent
+    change / points.first.net_worth * 100 unless points.first.net_worth.zero?
+  end
 end

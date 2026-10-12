@@ -1,0 +1,14 @@
+<% content_for :title, "Connect your accounts · Financial Tracker" %>
+
+<p class="text-sm font-semibold text-teal">Welcome, <%= Current.user.first_name %></p>
+<h1 class="mt-1 text-3xl font-bold tracking-tight">Connect your accounts</h1>
+<p class="mt-2 text-base-content/70">Link your banks, credit cards and investments to see your net worth in one place. We use Plaid to connect securely, and we never see your bank password.</p>
+
+<div class="mt-8">
+  <%= render "plaid/connect_buttons", from: "onboarding", stacked: true %>
+</div>
+
+<p class="mt-8 text-center text-sm text-base-content/70">
+  <%= link_to "Skip for now", root_path, class: "font-semibold text-base-content hover:underline" %>
+  · you can connect accounts any time from the dashboard
+</p>

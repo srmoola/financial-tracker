@@ -1,15 +1,35 @@
 <% content_for :title, "Overview · Financial Tracker" %>
 
-<div role="alert" class="alert alert-info alert-soft">
-  <span>You're looking at sample data. Your real accounts will show up here once you connect them.</span>
-</div>
+<% if @sample %>
+  <section class="card border border-base-300 bg-pastel" aria-labelledby="link-accounts-heading">
+    <div class="card-body gap-4 p-6 sm:p-8">
+      <div>
+        <h2 id="link-accounts-heading" class="text-xl font-bold tracking-tight">Link your real accounts</h2>
+        <p class="mt-1 text-base-content/70">You're looking at sample data. Connect your banks, credit cards and investments to see your own net worth.</p>
+      </div>
+      <%= render "plaid/connect_buttons", from: "dashboard" %>
+    </div>
+  </section>
+<% end %>
 
-<div class="mt-6">
-  <%= render "net_worth", breakdown: NetWorthBreakdown.new(SampleData::ACCOUNTS) %>
+<div class="<%= class_names("mt-6": @sample) %>">
+  <%= render "net_worth", breakdown: @breakdown, sample: @sample %>
 </div>
 
 <div class="mt-8">
-  <%= render "net_worth_history", history: @history, range: @range, view: @view %>
+  <% if @history.points.size >= 2 %>
+    <%= render "net_worth_history", history: @history, range: @range, view: @view %>
+  <% else %>
+    <section aria-labelledby="net-worth-history-heading">
+      <h2 id="net-worth-history-heading" class="text-lg font-bold tracking-tight">Net worth over time</h2>
+      <div class="card mt-3 border border-dashed border-base-300 bg-base-100">
+        <div class="card-body items-center p-10 text-center">
+          <p class="font-semibold">Your history starts today</p>
+          <p class="max-w-md text-sm text-base-content/60">Balances are saved once a day, so this chart fills in as the days go by. Check back tomorrow.</p>
+        </div>
+      </div>
+    </section>
+  <% end %>
 </div>
 
 <div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -23,8 +43,12 @@
         </div>
         <div>
           <h3 class="font-semibold"><%= item.label %></h3>
-          <p class="mt-2 text-2xl font-bold tracking-tight"><%= highlight.stat %></p>
-          <p class="text-sm text-base-content/60"><%= highlight.detail %></p>
+          <% if @sample %>
+            <p class="mt-2 text-2xl font-bold tracking-tight"><%= highlight.stat %></p>
+            <p class="text-sm text-base-content/60"><%= highlight.detail %></p>
+          <% else %>
+            <p class="mt-2 text-sm text-base-content/60">Coming soon</p>
+          <% end %>
         </div>
       </div>
     <% end %>

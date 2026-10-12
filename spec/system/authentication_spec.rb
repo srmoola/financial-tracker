@@ -15,7 +15,11 @@ RSpec.describe "Authentication", type: :system do
     fill_in "Password confirmation", with: "password123"
     click_on "Sign up"
 
+    expect(page).to have_text("Connect your accounts")
+    click_on "Skip for now"
+
     expect(page).to have_text("Ada Lovelace")
+    expect(page).to have_text("Link your real accounts")
 
     click_on "Log out"
     expect(page).to have_current_path(new_session_path)

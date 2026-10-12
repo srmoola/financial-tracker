@@ -44,7 +44,7 @@
             </svg>
             <span class="font-semibold tabular-nums">
               <%= up ? "+" : "−" %><%= number_to_currency(history.change.abs) %>
-              (<%= up ? "+" : "−" %><%= number_to_percentage(history.change_percent.abs, precision: 1) %>)
+              <% if history.change_percent %>(<%= up ? "+" : "−" %><%= number_to_percentage(history.change_percent.abs, precision: 1) %>)<% end %>
             </span>
             <span class="text-sm text-base-content/60">net worth over the last <%= range_label %></span>
           </div>

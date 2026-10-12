@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe NetWorthHistory do
   def snapshot(account_type, subtype, date, balance)
-    account = SampleData::Account.new(name: "Account", institution: "Bank", mask: "0000", account_type:, subtype:, balance: 0)
+    account = SampleData::Account.new(name: "Account", institution_name: "Bank", mask: "0000", account_type:, subtype:, balance: 0)
     SampleData::Snapshot.new(account:, date:, balance: BigDecimal(balance))
   end
 

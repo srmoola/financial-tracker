@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe NetWorthBreakdown do
   def account(account_type, subtype, balance)
-    SampleData::Account.new(name: "#{subtype} account", institution: "Bank", mask: "0000", account_type:, subtype:, balance: BigDecimal(balance))
+    SampleData::Account.new(name: "#{subtype} account", institution_name: "Bank", mask: "0000", account_type:, subtype:, balance: BigDecimal(balance))
   end
 
   it "groups accounts into checking, savings and investments, with credit cards as debts" do
