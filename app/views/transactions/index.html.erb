@@ -13,27 +13,11 @@
     </div>
   </section>
 <% else %>
-  <% if @range == "all" %>
-    <% range_text = "yet" %>
-    <% range_heading = @earliest_date ? "All time, since #{@earliest_date.strftime("%b %-d, %Y")}" : "All time" %>
-  <% else %>
-    <% range_text = @range == "statement" ? "this statement period" : statement_range_start(@credit_cards, @statements_back) %>
-    <% range_heading = statement_range_heading(@credit_cards, @statements_back) %>
-  <% end %>
   <% category_label = @category && (@spending.categories.find { |category| category.param == @category }&.label || SpendingBreakdown.label_for(@category == "uncategorized" ? nil : @category)) %>
 
-  <%# Everything below updates in place (range, category, page) without reloading the page. %>
+  <%# Everything below updates in place (ranges, category, page) without reloading the page. %>
   <%= turbo_frame_tag "transactions_content", class: "block transition-opacity aria-busy:opacity-60",
         data: { turbo_action: "advance", controller: "frame-scroll recategorize transaction-note", transaction_note_max_length_value: Transaction::NOTE_MAX_LENGTH, action: "turbo:click->frame-scroll#remember turbo:before-frame-render->frame-scroll#keepPosition turbo:frame-render->frame-scroll#restore" } do %>
-    <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
-      <p class="text-sm font-medium text-base-content/70"><%= range_heading %></p>
-      <nav class="tabs tabs-box tabs-sm" aria-label="Time range">
-        <% TransactionsController::RANGES.each do |key, label| %>
-          <%= link_to label, transactions_path(range: key, category: @category, spending_view: @spending_view, chart_range: @chart_range), class: class_names("tab", "tab-active": key == @range), aria: { current: (key == @range) || nil } %>
-        <% end %>
-      </nav>
-    </div>
-
     <% if @plaid_items_needing_consent.any? %>
       <div class="mt-4 flex flex-col gap-3"><%= render "plaid/statement_dates_prompt", plaid_items: @plaid_items_needing_consent, from: "transactions" %></div>
     <% end %>
@@ -46,39 +30,51 @@
         </div>
       </section>
     <% else %>
-      <div class="mt-4">
-        <%= render "spending", spending: @spending, range: @range, range_text:, selected: @category, spending_view: @spending_view, chart_range: @chart_range %>
+      <div class="mt-6">
+        <%= render "spending", spending: @spending, range: @range, range_heading: range_heading(@range, @credit_cards, @earliest_date),
+              range_text: range_phrase(@range, @credit_cards), selected: @category %>
       </div>
 
       <div class="mt-6">
-        <%= render "spending_history", history: @spending_history, spending: @spending, view: @spending_view, range: @range, chart_range: @chart_range, list_category: @category %>
+        <%= render "spending_history", history: @spending_history, spending: @spending, view: @spending_view, chart_range: @chart_range %>
       </div>
 
       <section class="card mt-6 border border-base-300 bg-base-100" aria-labelledby="transactions-heading">
         <div class="card-body gap-0 p-0">
-          <div class="flex flex-col gap-2 px-6 pt-6 pb-3 sm:flex-row sm:items-center sm:justify-between sm:px-8">
-            <div class="flex flex-wrap items-center gap-3">
-              <h2 id="transactions-heading" class="scroll-mt-4 text-lg font-bold tracking-tight">Transactions</h2>
+          <div class="flex flex-col gap-3 px-6 pt-6 pb-4 sm:px-8">
+            <div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
+              <div>
+                <h2 id="transactions-heading" class="scroll-mt-4 text-lg font-bold tracking-tight">Transactions</h2>
+                <p class="text-sm text-base-content/60"><%= range_heading(@list_range, @credit_cards, @earliest_date) %></p>
+              </div>
+              <p class="flex-none text-sm text-base-content/60">
+                <% if @total_count.zero? %>
+                  No transactions
+                <% else %>
+                  Showing <%= (@page - 1) * TransactionsController::PER_PAGE + 1 %>–<%= [ @page * TransactionsController::PER_PAGE, @total_count ].min %> of <%= number_with_delimiter(@total_count) %>
+                <% end %>
+              </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <nav class="tabs tabs-box tabs-sm" aria-label="Transactions time range">
+                <% TransactionsController::RANGES.each do |key, label| %>
+                  <%= link_to label, transactions_path_with(list_range: key), class: class_names("tab", "tab-active": key == @list_range), aria: { current: (key == @list_range) || nil } %>
+                <% end %>
+              </nav>
               <%= form_with url: transactions_path, method: :get, data: { controller: "auto-submit" } do |form| %>
                 <%= form.hidden_field :range, value: @range %>
-                <%= form.hidden_field :spending_view, value: @spending_view %>
+                <%= form.hidden_field :list_range, value: @list_range %>
                 <%= form.hidden_field :chart_range, value: @chart_range %>
+                <%= form.hidden_field :spending_view, value: @spending_view %>
                 <%= form.select :category, options_for_select(@category_options, @category), { include_blank: "All categories" },
                       class: class_names("select select-sm w-auto", "select-primary": @category), aria: { label: "Filter by category" },
                       data: { action: "auto-submit#submit" } %>
               <% end %>
             </div>
-            <p class="text-sm text-base-content/60">
-              <% if @total_count.zero? %>
-                No transactions
-              <% else %>
-                Showing <%= (@page - 1) * TransactionsController::PER_PAGE + 1 %>–<%= [ @page * TransactionsController::PER_PAGE, @total_count ].min %> of <%= number_with_delimiter(@total_count) %>
-              <% end %>
-            </p>
           </div>
 
           <% if @transactions.empty? %>
-            <p class="border-t border-base-300 px-6 py-10 text-center text-base-content/60 sm:px-8">No <%= category_label ? "#{category_label} " : "" %>transactions <%= range_text %>.</p>
+            <p class="border-t border-base-300 px-6 py-10 text-center text-base-content/60 sm:px-8">No <%= category_label ? "#{category_label} " : "" %>transactions <%= range_phrase(@list_range, @credit_cards) %>.</p>
           <% else %>
             <% @transactions.group_by(&:date).each do |date, transactions_on_day| %>
               <h3 class="border-y border-base-300 bg-base-200/60 px-6 py-2 text-xs font-semibold uppercase tracking-wide text-base-content/60 sm:px-8">
@@ -143,7 +139,7 @@
           <% end %>
 
           <% if @page_count > 1 %>
-            <% page_link = ->(number) { transactions_path(range: @range, category: @category, spending_view: @spending_view, chart_range: @chart_range, page: number) } %>
+            <% page_link = ->(number) { transactions_path_with(page: number) } %>
             <nav class="flex justify-center border-t border-base-300 px-6 py-4" aria-label="Pagination">
               <div class="join">
                 <% if @page > 1 %>

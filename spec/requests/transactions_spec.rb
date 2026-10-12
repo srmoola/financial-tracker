@@ -49,7 +49,7 @@ RSpec.describe "Transactions page", type: :request do
         add_transaction(amount: 30, merchant: "Start Of Range", date: Date.new(2026, 6, 16))
         add_transaction(amount: 40, merchant: "Before Range", date: Date.new(2026, 6, 15))
 
-        get transactions_path(range: "3m")
+        get transactions_path(range: "3m", list_range: "3m")
 
         expect(response.body).to include("Your last 3 statements and this month, since Jun 16", "Start Of Range")
         expect(body_outside_chart).not_to include("Before Range")
@@ -62,13 +62,13 @@ RSpec.describe "Transactions page", type: :request do
         add_transaction(amount: 25, merchant: "Two Years Ago", date: Date.new(2024, 10, 14))
         add_transaction(amount: 10, merchant: "Recent", date: Date.new(2026, 10, 1))
 
-        get transactions_path(range: "all")
+        get transactions_path(range: "all", list_range: "all")
 
         expect(response.body).to include("All time, since Oct 14, 2024", "Two Years Ago", "Recent", "$35.00")
         expect(response.body).to match(%r{<a [^>]*tab-active[^>]*>All</a>})
 
-        get transactions_path(range: "1y")
-        expect(response.body).not_to include("Two Years Ago")
+        get transactions_path(range: "1y", list_range: "1y")
+        expect(body_outside_chart).not_to include("Two Years Ago")
       end
     end
 
@@ -140,8 +140,8 @@ RSpec.describe "Transactions page", type: :request do
       get transactions_path(range: "1m")
 
       expect(response.body).to include("Click a category to see its transactions.")
-      expect(response.body).to match(%r{<a class="btn btn-sm btn-primary" hidden="hidden" data-donut-target="action" data-scroll-to="#transactions-heading" href="/transactions\?category=TRAVEL&amp;chart_range=6m&amp;range=1m&amp;spending_view=total">\s*See Travel transactions})
-      expect(response.body).not_to include('href="/transactions?category=TRAVEL&amp;chart_range=6m&amp;range=1m&amp;spending_view=total" aria-label') # legend rows only select
+      expect(response.body).to match(%r{<a class="btn btn-sm btn-primary" hidden="hidden" data-donut-target="action" data-scroll-to="#transactions-heading" href="/transactions\?category=TRAVEL&amp;chart_range=6m&amp;list_range=1m&amp;range=1m&amp;spending_view=total">\s*See Travel transactions})
+      expect(response.body).not_to include('href="/transactions?category=TRAVEL&amp;chart_range=6m&amp;list_range=1m&amp;range=1m&amp;spending_view=total" aria-label') # legend rows only select
     end
 
     it "supports uncategorized transactions" do
@@ -179,7 +179,7 @@ RSpec.describe "Transactions page", type: :request do
       get transactions_path
 
       expect(response.body).to include("Spending over time", "Total per statement month", "Aug 16 – Sep 15", "Sep 16 – Oct 12 (so far)")
-      expect(response.body).to include("/transactions?chart_range=1y&amp;range=statement&amp;spending_view=total")
+      expect(response.body).to include("/transactions?chart_range=1y&amp;list_range=statement&amp;range=statement&amp;spending_view=total")
     end
 
     it "shows a running total by day for ranges under 6 months" do
@@ -210,32 +210,50 @@ RSpec.describe "Transactions page", type: :request do
 
       expect(response.body).not_to include("Travel only")
       expect(response.body.scan('data-line-chart-target="dot"').size).to eq(2)
-      expect(response.body).to include("Spending chart lines", "/transactions?category=TRAVEL&amp;chart_range=1y&amp;range=1y&amp;spending_view=categories")
+      expect(response.body).to include("Spending chart lines", "/transactions?category=TRAVEL&amp;chart_range=1y&amp;list_range=statement&amp;range=1y&amp;spending_view=categories")
 
       get transactions_path(range: "1y", category: "TRAVEL")
       expect(response.body).to include("Coffee", "$30.00") # a Food & drink purchase, in the chart's top purchases
     end
 
-    it "keeps the chart's range and view when the page range changes, and the page range when the chart's changes" do
-      get transactions_path(range: "1m", spending_view: "categories", chart_range: "1y")
+    it "keeps the other ranges and the chart's view when one range changes" do
+      get transactions_path(range: "1m", list_range: "6m", spending_view: "categories", chart_range: "1y")
 
-      expect(response.body).to include("/transactions?chart_range=1y&amp;range=3m&amp;spending_view=categories")
-      expect(response.body).to include("/transactions?chart_range=3m&amp;range=1m&amp;spending_view=categories")
+      expect(response.body).to include("/transactions?chart_range=1y&amp;list_range=6m&amp;range=3m&amp;spending_view=categories") # donut's 3M
+      expect(response.body).to include("/transactions?chart_range=3m&amp;list_range=6m&amp;range=1m&amp;spending_view=categories") # chart's 3M
+      expect(response.body).to include("/transactions?chart_range=1y&amp;list_range=1y&amp;range=1m&amp;spending_view=categories") # list's 1Y
     end
   end
 
   it "paginates 25 per page with numbered pages, newest first" do
     30.times { |days_ago| add_transaction(amount: 1, merchant: "Shop #{days_ago}", date: Date.current - days_ago) }
 
-    get transactions_path(range: "3m")
+    get transactions_path(list_range: "3m")
     expect(response.body).to include("Showing 1–25 of 30", "Shop 0", "Shop 24", 'aria-label="Page 2"', 'aria-label="Next page"')
-    expect(response.body).not_to include("Shop 25")
+    expect(body_outside_chart).not_to include("Shop 25")
+    expect(response.body).to include("/transactions?chart_range=6m&amp;list_range=3m&amp;page=2&amp;range=statement&amp;spending_view=total")
 
-    get transactions_path(range: "3m", page: 2)
+    get transactions_path(list_range: "3m", page: 2)
     expect(response.body).to include("Showing 26–30 of 30", "Shop 25", "Shop 29", 'aria-current="page"')
 
-    get transactions_path(range: "3m", page: 99)
+    get transactions_path(list_range: "3m", page: 99)
     expect(response.body).to include("Showing 26–30 of 30")
+  end
+
+  it "gives the list its own time range, separate from the spending summary's" do
+    travel_to Date.new(2026, 10, 12) do
+      card.update!(last_statement_issue_date: Date.new(2026, 9, 15))
+      add_transaction(amount: 20, merchant: "Recent Purchase", date: Date.new(2026, 10, 1))
+      add_transaction(amount: 70, merchant: "Older Purchase", date: Date.new(2026, 8, 20))
+
+      get transactions_path(list_range: "3m")
+
+      expect(response.body).to include("Showing 1–2 of 2", "Older Purchase", 'aria-label="Transactions time range"', 'aria-label="Spending time range"')
+      expect(response.body).to include('<p class="mt-1 text-sm text-base-content/60" data-donut-target="detail">1 purchase</p>') # the donut is still This month
+
+      get transactions_path(range: "3m")
+      expect(response.body).to include("Showing 1–1 of 1", '<p class="mt-1 text-sm text-base-content/60" data-donut-target="detail">2 purchases</p>')
+    end
   end
 
   it "never shows another user's transactions" do

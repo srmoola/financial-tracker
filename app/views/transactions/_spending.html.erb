@@ -1,5 +1,6 @@
-<%# locals: (spending:, range:, range_text:, selected:, spending_view: "total", chart_range: nil) %>
-<%# Clicking a category selects it here only; its button filters the transactions list. %>
+<%# locals: (spending:, range:, range_heading:, range_text:, selected:) %>
+<%# Spending by category for its own time range. Clicking a category selects it here only;
+    its button shows the list that category's transactions for the same range. %>
 <% categories = spending.categories %>
 <% segments = donut_segments(categories.map { |category| category.total.to_f }, colors: spending_colors(categories), radius: 80) %>
 <% total_label = number_to_currency(spending.total) %>
@@ -8,8 +9,16 @@
 <section class="card border border-base-300 bg-base-100" aria-labelledby="spending-heading"
          data-controller="donut" data-donut-selected-value="<%= selected_index %>">
   <div class="card-body gap-6 p-6 sm:p-8">
-    <div>
-      <h2 id="spending-heading" class="text-lg font-bold tracking-tight">Spending</h2>
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <h2 id="spending-heading" class="text-lg font-bold tracking-tight">Spending</h2>
+        <p class="text-sm text-base-content/60"><%= range_heading %></p>
+      </div>
+      <nav class="tabs tabs-box tabs-sm" aria-label="Spending time range">
+        <% TransactionsController::RANGES.each do |key, label| %>
+          <%= link_to label, transactions_path_with(range: key), class: class_names("tab", "tab-active": key == range), aria: { current: (key == range) || nil } %>
+        <% end %>
+      </nav>
     </div>
 
     <% if categories.empty? %>
@@ -47,7 +56,7 @@
         <div class="-my-4 flex min-h-9 items-center justify-center">
           <p class="text-sm text-base-content/60" data-donut-target="prompt">Click a category to see its transactions.</p>
           <% categories.each do |category| %>
-            <%= link_to transactions_path(range:, category: category.param, spending_view:, chart_range:), class: "btn btn-sm btn-primary", hidden: true,
+            <%= link_to transactions_path_with(category: category.param, list_range: range), class: "btn btn-sm btn-primary", hidden: true,
                   data: { donut_target: "action", scroll_to: "#transactions-heading" } do %>
               See <%= category.label %> transactions
               <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
