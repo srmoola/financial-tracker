@@ -44,4 +44,15 @@ RSpec.describe "Pages", type: :request do
     get root_path(range: "bogus")
     expect(response.body).to include("over the last 6 months")
   end
+
+  it "draws one net worth line by default, or a line per category" do
+    sign_in_as users(:one)
+
+    get root_path
+    expect(response.body.scan('data-line-chart-target="dot"').size).to eq(1)
+
+    get root_path(view: "categories")
+    expect(response.body.scan('data-line-chart-target="dot"').size).to eq(3)
+    expect(response.body).to include('aria-label="Legend"')
+  end
 end

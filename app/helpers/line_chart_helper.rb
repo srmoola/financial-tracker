@@ -1,30 +1,48 @@
 module LineChartHelper
-  LineChart = Data.define(:line, :y_ticks, :x_ticks, :points)
+  Series = Data.define(:key, :label, :color, :values)
+  Line = Data.define(:key, :label, :color, :points, :end_y)
+  LineChart = Data.define(:lines, :y_ticks, :x_ticks, :hover)
   Tick = Data.define(:label, :position)
 
-  # Lays out a single-series line chart in percentages of the plot area, so the
-  # SVG line can stretch to any width while the HTML labels stay crisp.
-  #   line    - SVG polyline points in a 0..100 viewBox
+  # Lays out a line chart (one or more series on one shared y-axis) in percentages
+  # of the plot area, so the SVG lines can stretch to any width while the HTML
+  # labels stay crisp.
+  #   lines   - per series: SVG polyline points in a 0..100 viewBox, and where it ends
   #   y_ticks - round values with their distance from the top (%)
   #   x_ticks - dates with their distance from the left (%)
-  #   points  - [x%, y%, date label, value label] per point, for the hover layer
-  def line_chart(dates, values)
+  #   hover   - per date: [x%, date label, [y% per series], tooltip rows]
+  def line_chart(dates, series, tooltip_rows:)
+    values = series.flat_map(&:values)
     step = nice_step(values.max - values.min)
     low = (values.min / step).floor * step
     high = (values.max / step).ceil * step
     high += step if high == low
 
-    x = ->(index) { values.size == 1 ? 50.0 : (index * 100.0 / (values.size - 1)).round(3) }
+    x = ->(index) { dates.size == 1 ? 50.0 : (index * 100.0 / (dates.size - 1)).round(3) }
     y = ->(value) { ((high - value) * 100.0 / (high - low)).round(3) }
 
     LineChart.new(
-      line: values.each_with_index.map { |value, index| "#{x.(index)},#{y.(value)}" }.join(" "),
+      lines: series.map do |line|
+        Line.new(key: line.key, label: line.label, color: line.color, end_y: y.(line.values.last),
+          points: line.values.each_with_index.map { |value, index| "#{x.(index)},#{y.(value)}" }.join(" "))
+      end,
       y_ticks: low.step(high, step).map { |value| Tick.new(label: compact_currency(value, step), position: y.(value)) },
       x_ticks: date_ticks(dates).map { |index, label| Tick.new(label:, position: x.(index)) },
-      points: dates.zip(values).each_with_index.map do |(date, value), index|
-        [ x.(index), y.(value), date.strftime("%b %-d, %Y"), number_to_currency(value) ]
+      hover: dates.each_with_index.map do |date, index|
+        [ x.(index), date.strftime("%b %-d, %Y"), series.map { |line| y.(line.values[index]) }, tooltip_rows[index] ]
       end
     )
+  end
+
+  # Where to put each line's end label (% from the top), nudged apart so labels
+  # for lines that end close together don't overlap.
+  def end_label_positions(lines, min_gap: 9)
+    previous = nil
+    lines.sort_by(&:end_y).map do |line|
+      position = previous ? [ line.end_y, previous + min_gap ].max : line.end_y
+      previous = position
+      [ line, position ]
+    end
   end
 
   private
@@ -47,7 +65,7 @@ module LineChartHelper
     end
 
     def compact_currency(value, step)
-      return number_to_currency(value, precision: 0) if step < 1_000
+      return number_to_currency(value, precision: 0) if step < 1_000 || value.zero?
 
       "$#{number_with_precision(value / 1_000.0, precision: 1, delimiter: ",", strip_insignificant_zeros: true)}K"
     end

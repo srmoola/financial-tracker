@@ -21,6 +21,20 @@ RSpec.describe NetWorthHistory do
     expect(history.change_percent).to eq(-30)
   end
 
+  it "keeps each day's category totals and credit card debt" do
+    history = NetWorthHistory.new([
+      snapshot("depository", "checking", today, "100"),
+      snapshot("investment", "brokerage", today, "40"),
+      snapshot("credit", "credit card", today, "30")
+    ])
+
+    expect(history.points.sole).to have_attributes(
+      categories: { checking: 100, savings: 0, investments: 40 },
+      debts: 30,
+      net_worth: 110
+    )
+  end
+
   it "starts each range the right number of months back" do
     expect(NetWorthHistory.range_start("1m", today:)).to eq(Date.new(2026, 9, 12))
     expect(NetWorthHistory.range_start("1y", today:)).to eq(Date.new(2025, 10, 12))

@@ -1,7 +1,8 @@
 # Net worth per day, built from per-account balance snapshots (anything with
 # date, balance, account_type and subtype), using the same rules as NetWorthBreakdown.
+# Each point also keeps that day's total per category and the credit card debt.
 class NetWorthHistory
-  Point = Data.define(:date, :net_worth)
+  Point = Data.define(:date, :net_worth, :categories, :debts)
 
   RANGES = { "1m" => 1.month, "3m" => 3.months, "6m" => 6.months, "1y" => 1.year }.freeze
   DEFAULT_RANGE = "6m"
@@ -12,7 +13,15 @@ class NetWorthHistory
 
   def initialize(snapshots)
     @points = snapshots.group_by(&:date).sort.map do |date, snapshots_that_day|
-      Point.new(date:, net_worth: NetWorthBreakdown.new(snapshots_that_day).net_worth)
+      breakdown = NetWorthBreakdown.new(snapshots_that_day)
+      totals = breakdown.groups.to_h { |group| [ group.key, group.total ] }
+
+      Point.new(
+        date:,
+        net_worth: breakdown.net_worth,
+        categories: NetWorthBreakdown::GROUPS.keys.index_with { |key| totals.fetch(key, 0) },
+        debts: breakdown.debts_total
+      )
     end
   end
 
