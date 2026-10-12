@@ -21,6 +21,23 @@ module TransactionsHelper
     pages.each_with_index.flat_map { |number, index| index.positive? && number - pages[index - 1] > 1 ? [ :gap, number ] : [ number ] }
   end
 
+  # A time range (see TransactionsController::RANGES) as a heading ("Your last
+  # 3 statements and this month, since Jun 16") and as the end of a sentence
+  # ("No purchases since Jun 16").
+  def range_heading(range, cards, earliest_date)
+    return earliest_date ? "All time, since #{earliest_date.strftime("%b %-d, %Y")}" : "All time" if range == "all"
+
+    statement_range_heading(cards, TransactionsController::STATEMENTS_BACK.fetch(range))
+  end
+
+  def range_phrase(range, cards)
+    case range
+    when "all" then "yet"
+    when "statement" then "this statement period"
+    else statement_range_start(cards, TransactionsController::STATEMENTS_BACK.fetch(range))
+    end
+  end
+
   # What a range covers, e.g. "Your last 3 statements and this month, since Jun 16".
   # Cards with different statement dates are described together.
   def statement_range_heading(cards, periods_back)

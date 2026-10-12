@@ -1,6 +1,5 @@
-<%# locals: (history:, spending:, view:, range:, chart_range:, list_category: nil) %>
-<%# Spending over time, for every category (the list's category filter doesn't apply).
-    `range` and `list_category` are the list's, kept in this chart's links. %>
+<%# locals: (history:, spending:, view:, chart_range:) %>
+<%# Spending over time, for every category (the list's category filter doesn't apply). %>
 <% points = history.points %>
 <% categories = spending.categories %>
 <% colors = categories.zip(spending_colors(categories)).to_h { |category, color| [ category.key, color ] } %>
@@ -31,13 +30,13 @@
         <% unless history.empty? %>
           <nav class="tabs tabs-box tabs-sm" aria-label="Spending chart lines">
             <% [ [ "total", "Total" ], [ "categories", "By category" ] ].each do |key, label| %>
-              <%= link_to label, transactions_path(range:, category: list_category, spending_view: key, chart_range:), class: class_names("tab", "tab-active": view == key), aria: { current: (view == key) || nil } %>
+              <%= link_to label, transactions_path_with(spending_view: key), class: class_names("tab", "tab-active": view == key), aria: { current: (view == key) || nil } %>
             <% end %>
           </nav>
         <% end %>
         <nav class="tabs tabs-box tabs-sm" aria-label="Spending chart time range">
           <% TransactionsController::RANGES.each do |key, label| %>
-            <%= link_to label, transactions_path(range:, category: list_category, spending_view: view, chart_range: key), class: class_names("tab", "tab-active": key == chart_range), aria: { current: (key == chart_range) || nil } %>
+            <%= link_to label, transactions_path_with(chart_range: key), class: class_names("tab", "tab-active": key == chart_range), aria: { current: (key == chart_range) || nil } %>
           <% end %>
         </nav>
       </div>
