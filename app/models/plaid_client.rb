@@ -1,16 +1,19 @@
-# The Plaid API client. Keys come from environment variables (locally, the
-# gitignored .env file loaded by Docker Compose), falling back to encrypted
-# credentials:
+# The Plaid API client. The Rails environment picks Plaid's: production uses
+# Production (real banks), and development and test use Sandbox (test banks).
+# Keys must be for that Plaid environment. They come from environment variables
+# (locally, the gitignored .env file loaded by Docker Compose), falling back to
+# encrypted credentials:
 #
-#   PLAID_CLIENT_ID / PLAID_SECRET / PLAID_ENV (sandbox or production)
-#   or credentials: plaid: { client_id:, secret:, environment: }
+#   PLAID_CLIENT_ID / PLAID_SECRET
+#   or credentials: plaid: { client_id:, secret: }
 module PlaidClient
+  def self.environment = Rails.env.production? ? "production" : "sandbox"
+
   def self.api
     @api ||= begin
       credentials = Rails.application.credentials.plaid || {}
       client_id = ENV["PLAID_CLIENT_ID"].presence || credentials[:client_id]
       secret = ENV["PLAID_SECRET"].presence || credentials[:secret]
-      environment = ENV["PLAID_ENV"].presence || credentials[:environment] || "sandbox"
       raise "Plaid keys are missing. Set PLAID_CLIENT_ID and PLAID_SECRET (e.g. in .env)." if client_id.blank? || secret.blank?
 
       configuration = Plaid::Configuration.new
