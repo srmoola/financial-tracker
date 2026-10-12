@@ -15,7 +15,7 @@ RSpec.describe "Authentication", type: :system do
     fill_in "Password confirmation", with: "password123"
     click_on "Sign up"
 
-    expect(page).to have_text("Welcome back, Ada")
+    expect(page).to have_text("Ada Lovelace")
 
     click_on "Log out"
     expect(page).to have_current_path(new_session_path)
@@ -24,7 +24,7 @@ RSpec.describe "Authentication", type: :system do
     fill_in "Password", with: "password123"
     click_on "Log in"
 
-    expect(page).to have_text("Welcome back, Ada")
+    expect(page).to have_text("Ada Lovelace")
   end
 
   it "shows an error for a wrong password" do
