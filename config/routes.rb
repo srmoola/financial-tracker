@@ -6,6 +6,8 @@ Rails.application.routes.draw do
 
   # Connecting accounts with Plaid Link
   resources :accounts, only: :index
+  # Whether the daily sync ran for each recent day
+  resource :sync_history, only: :show, path: "accounts/sync-history"
   resources :plaid_link_tokens, only: :create, path: "plaid/link_tokens"
   resources :plaid_items, only: %i[ create destroy ] do
     post :statement_dates, on: :member

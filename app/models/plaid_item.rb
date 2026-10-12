@@ -8,6 +8,7 @@ class PlaidItem < ApplicationRecord
 
   belongs_to :user
   has_many :accounts, dependent: :destroy
+  has_many :daily_syncs, dependent: :delete_all
 
   encrypts :access_token
 

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_12_173000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_12_190000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -41,6 +41,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_12_173000) do
     t.date "last_statement_issue_date"
     t.index ["plaid_account_id"], name: "index_accounts_on_plaid_account_id", unique: true
     t.index ["plaid_item_id"], name: "index_accounts_on_plaid_item_id"
+  end
+
+  create_table "daily_syncs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "plaid_item_id", null: false
+    t.boolean "succeeded", null: false
+    t.string "error"
+    t.datetime "created_at", null: false
+    t.index ["plaid_item_id", "created_at"], name: "index_daily_syncs_on_plaid_item_id_and_created_at"
+    t.index ["plaid_item_id"], name: "index_daily_syncs_on_plaid_item_id"
   end
 
   create_table "plaid_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -272,6 +281,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_12_173000) do
 
   add_foreign_key "account_balance_snapshots", "accounts"
   add_foreign_key "accounts", "plaid_items"
+  add_foreign_key "daily_syncs", "plaid_items"
   add_foreign_key "plaid_items", "users"
   add_foreign_key "sessions", "users"
   add_foreign_key "solid_queue_batch_executions", "solid_queue_batches", column: "batch_id", on_delete: :cascade
