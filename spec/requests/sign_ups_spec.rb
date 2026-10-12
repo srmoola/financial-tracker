@@ -27,7 +27,7 @@ RSpec.describe "Sign ups", type: :request do
 
     expect(response).to redirect_to(root_path)
     expect(cookies[:session_id]).to be_present
-    expect(User.last).to have_attributes(first_name: "Ada", last_name: "Lovelace")
+    expect(User.find_by!(email_address: "new@example.com")).to have_attributes(first_name: "Ada", last_name: "Lovelace")
   end
 
   it "rejects a missing first or last name" do
