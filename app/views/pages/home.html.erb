@@ -5,9 +5,7 @@
 </div>
 
 <div class="mt-6">
-  <%= render "net_worth",
-        assets: SampleData::ASSETS, debts: SampleData::DEBTS,
-        assets_total: SampleData.assets_total, debts_total: SampleData.debts_total, net_worth: SampleData.net_worth %>
+  <%= render "net_worth", breakdown: NetWorthBreakdown.new(SampleData::ACCOUNTS) %>
 </div>
 
 <div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

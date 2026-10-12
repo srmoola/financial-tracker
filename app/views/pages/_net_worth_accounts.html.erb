@@ -1,0 +1,12 @@
+<%# locals: (accounts:, owed: false) %>
+<ul class="divide-y divide-base-300 border-t border-base-300 bg-base-200/40">
+  <% accounts.each do |account| %>
+    <li class="flex items-center gap-3 py-2.5 pl-10 pr-4 text-sm">
+      <div class="min-w-0 flex-1">
+        <p class="truncate font-medium"><%= account.name %></p>
+        <p class="text-xs text-base-content/60"><%= account.institution %> •••• <%= account.mask %></p>
+      </div>
+      <p class="flex-none tabular-nums"><%= "−" if owed %><%= number_to_currency(account.balance) %></p>
+    </li>
+  <% end %>
+</ul>

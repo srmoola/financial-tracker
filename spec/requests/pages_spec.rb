@@ -21,12 +21,14 @@ RSpec.describe "Pages", type: :request do
     expect(response.body).not_to include("See all your money in")
   end
 
-  it "shows the net worth chart with sample accounts on the dashboard" do
+  it "shows the net worth chart grouped by category on the dashboard" do
     sign_in_as users(:one)
 
     get root_path
 
-    expect(response.body).to include("Net worth", "$82,982.30", "Roth IRA", "Rewards Credit Card", "Sample data")
-    expect(response.body.scan('data-donut-target="segment"').size).to eq(SampleData::ASSETS.size)
+    expect(response.body).to include("Net worth", "$93,358.70", "Sample data")
+    expect(response.body).to include("Checking", "Savings", "Investments", "Credit cards")
+    expect(response.body).to include("Joint Checking", "Roth IRA", "Rewards Credit Card", "3 accounts")
+    expect(response.body.scan('data-donut-target="segment"').size).to eq(3)
   end
 end
