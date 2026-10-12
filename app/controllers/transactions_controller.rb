@@ -1,5 +1,6 @@
 # Credit card transactions: a spending summary and a paginated list, both for
-# the chosen time range. Clicking a spending category filters the list to it.
+# the chosen time range, and a spending chart with its own range. Clicking a
+# spending category filters the list and the chart to it.
 class TransactionsController < ApplicationController
   PER_PAGE = 25
   RANGES = { "statement" => "This month", "1m" => "1M", "3m" => "3M", "6m" => "6M", "1y" => "1Y", "all" => "All" }.freeze
@@ -7,6 +8,7 @@ class TransactionsController < ApplicationController
   # include. "all" isn't here: it has no start date.
   STATEMENTS_BACK = { "statement" => 0, "1m" => 1, "3m" => 3, "6m" => 6, "1y" => 12 }.freeze
   DEFAULT_RANGE = "statement" # each card's current statement period
+  DEFAULT_CHART_RANGE = "6m"
 
   def index
     @range = RANGES.key?(params[:range]) ? params[:range] : DEFAULT_RANGE
@@ -15,12 +17,7 @@ class TransactionsController < ApplicationController
     return if @credit_cards.empty?
 
     @statements_back = STATEMENTS_BACK[@range]
-    in_range =
-      if @statements_back
-        Transaction.in_statement_periods(@credit_cards, periods_back: @statements_back)
-      else
-        Transaction.where(account: @credit_cards)
-      end
+    in_range = transactions_in(@range)
     @earliest_date = in_range.minimum(:date) if @range == "all"
     @spending = SpendingBreakdown.new(in_range)
     @any_transactions = Transaction.where(account: @credit_cards).exists?
@@ -29,9 +26,13 @@ class TransactionsController < ApplicationController
     listed = @category ? @spending.filter(in_range, @category) : in_range
 
     @spending_view = params[:spending_view] == "categories" ? "categories" : "total"
+    @chart_range = RANGES.key?(params[:chart_range]) ? params[:chart_range] : DEFAULT_CHART_RANGE
+    charted = transactions_in(@chart_range)
+    charted = @spending.filter(charted, @category) if @category
+    # Grouped into the donut's categories, so each category keeps its color.
     @spending_history = SpendingHistory.new(
-      listed.where("amount > 0"), cards: @credit_cards,
-      category_keys: @spending.categories.map(&:key) - [ :other ], periods_back: @statements_back
+      charted.where("amount > 0"), cards: @credit_cards,
+      category_keys: @spending.categories.map(&:key) - [ :other ], periods_back: STATEMENTS_BACK[@chart_range]
     )
 
     @total_count = listed.count
@@ -61,6 +62,14 @@ class TransactionsController < ApplicationController
   end
 
   private
+    def transactions_in(range)
+      if (periods_back = STATEMENTS_BACK[range])
+        Transaction.in_statement_periods(@credit_cards, periods_back:)
+      else
+        Transaction.where(account: @credit_cards)
+      end
+    end
+
     # Back to the same range, filter and page the change was made from.
     def return_path
       path = params[:return_to].to_s

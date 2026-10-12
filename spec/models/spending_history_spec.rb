@@ -32,17 +32,30 @@ RSpec.describe SpendingHistory do
     expect(result.points.last.total).to eq(17)
   end
 
-  it "totals each statement period for longer ranges, oldest first, with the current one marked so far" do
+  it "keeps going day by day for ranges under 6 months, from the first statement period in range" do
+    spend(30, Date.new(2026, 7, 20))
+    spend(5, Date.new(2026, 10, 1))
+
+    result = history(3)
+
+    expect(result).to be_daily
+    expect(result.points.first.date).to eq(Date.new(2026, 6, 16))
+    expect(result.points.index_by(&:date)[Date.new(2026, 7, 20)].total).to eq(30)
+    expect(result.points.last.total).to eq(35)
+  end
+
+  it "totals each statement period for 6 months and longer, oldest first, with the current one marked so far" do
     spend(30, Date.new(2026, 8, 16))
     spend(20, Date.new(2026, 9, 15))
     spend(7, Date.new(2026, 9, 16), "TRAVEL")
     spend(4, Date.new(2026, 10, 1), "ENTERTAINMENT")
 
-    result = history(1)
+    result = history(6)
 
     expect(result).not_to be_daily
-    expect(result.points.map(&:label)).to eq([ "Aug 16 – Sep 15", "Sep 16 – Oct 12 (so far)" ])
-    expect(result.points.map(&:total)).to eq([ 50, 11 ])
+    expect(result.points.size).to eq(7)
+    expect(result.points.last(2).map(&:label)).to eq([ "Aug 16 – Sep 15", "Sep 16 – Oct 12 (so far)" ])
+    expect(result.points.last(2).map(&:total)).to eq([ 50, 11 ])
     expect(result.points.last.by_category).to eq("TRAVEL" => 7, :other => 4)
   end
 

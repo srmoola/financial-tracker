@@ -1,38 +1,38 @@
 # Credit card spending over time, in the same categories as the spending donut.
-# "This month" shows how spending builds up day by day through the statement
-# period; longer ranges show the total for each statement period, using each
-# card's own statement dates.
+# Ranges under 6 months show how spending builds up day by day; longer ones
+# show the total for each statement period, using each card's own statement dates.
 class SpendingHistory
   Point = Data.define(:date, :label, :total, :by_category)
+  DAILY_UNDER_PERIODS = 6 # statement periods back; 6M and longer go by period
 
   attr_reader :points
 
   # `purchases`: the purchases (positive amounts) to chart, already limited to
   # the range. `category_keys`: the donut's named categories; anything else is
   # counted as :other. `periods_back`: statement periods before the current
-  # one (nil for all time). Daily for "This month" (periods_back 0).
+  # one (nil for all time).
   def initialize(purchases, cards:, category_keys:, periods_back:, today: Date.current)
     @cards = cards
     @today = today
     @group = ->(category) { category_keys.include?(category) ? category : :other }
     rows = purchases.pluck(:account_id, :date, Arel.sql(Transaction::EFFECTIVE_CATEGORY_SQL), :amount)
 
-    @daily = periods_back&.zero?
-    @points = @daily ? daily_points(rows) : period_points(rows, periods_back || periods_since(rows))
+    @daily = periods_back.present? && periods_back < DAILY_UNDER_PERIODS
+    @points = @daily ? daily_points(rows, periods_back) : period_points(rows, periods_back || periods_since(rows))
   end
 
-  # True for "This month": points are days with running totals, not statement periods.
+  # True when points are days with running totals, not statement periods.
   def daily? = @daily
   def empty? = points.none? { |point| point.total.positive? }
 
   private
-    # A running total per category for each day of the current statement period.
-    def daily_points(rows)
+    # A running total per category for each day since the range's first statement period began.
+    def daily_points(rows, periods_back)
       by_day = Hash.new { |hash, day| hash[day] = Hash.new(0) }
       rows.each { |_, date, category, amount| by_day[date][@group.(category)] += amount }
 
       running = Hash.new(0)
-      (@cards.map { |card| card.current_statement_start(today: @today) }.min..@today).map do |day|
+      (@cards.map { |card| card.statement_period_start(periods_back, today: @today) }.min..@today).map do |day|
         by_day[day].each { |category, amount| running[category] += amount }
         Point.new(date: day, label: day.strftime("%b %-d, %Y"), total: running.values.sum, by_category: running.dup)
       end

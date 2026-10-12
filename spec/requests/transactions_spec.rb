@@ -154,34 +154,41 @@ RSpec.describe "Transactions page", type: :request do
 
     after { travel_back }
 
-    it "shows a running total for This month" do
+    it "has its own range, defaulting to 6 months of statement months" do
       get transactions_path
 
-      expect(response.body).to include("Spending over time", "Running total through this statement period", "Spent so far")
+      expect(response.body).to include("Spending over time", "Total per statement month", "Aug 16 – Sep 15", "Sep 16 – Oct 12 (so far)")
+      expect(response.body).to include("/transactions?chart_range=1y&amp;range=statement&amp;spending_view=total")
     end
 
-    it "shows a total per statement month for longer ranges, with a line per category on request" do
-      get transactions_path(range: "1m")
-      expect(response.body).to include("Total for each statement month", "Aug 16 – Sep 15", "Sep 16 – Oct 12 (so far)")
+    it "shows a running total by day for ranges under 6 months" do
+      get transactions_path(chart_range: "3m")
+
+      expect(response.body).to include("Running total by day since Jun 16", "Spent so far")
+    end
+
+    it "shows a line per category on request" do
+      get transactions_path(spending_view: "total")
       expect(response.body.scan('data-line-chart-target="dot"').size).to eq(1)
 
-      get transactions_path(range: "1m", spending_view: "categories")
+      get transactions_path(range: "1y", spending_view: "categories")
       expect(response.body.scan('data-line-chart-target="dot"').size).to eq(2)
       expect(response.body).to include('aria-label="Legend"')
     end
 
     it "charts just the selected category when the list is filtered" do
-      get transactions_path(range: "1m", category: "TRAVEL", spending_view: "categories")
+      get transactions_path(range: "1y", category: "TRAVEL", spending_view: "categories")
 
       expect(response.body).to include("· Travel only")
       expect(response.body.scan('data-line-chart-target="dot"').size).to eq(1)
       expect(response.body).not_to include("Spending chart lines")
     end
 
-    it "keeps the chart view when switching ranges" do
-      get transactions_path(range: "1m", spending_view: "categories")
+    it "keeps the chart's range and view when the page range changes, and the page range when the chart's changes" do
+      get transactions_path(range: "1m", spending_view: "categories", chart_range: "1y")
 
-      expect(response.body).to include("/transactions?range=3m&amp;spending_view=categories")
+      expect(response.body).to include("/transactions?chart_range=1y&amp;range=3m&amp;spending_view=categories")
+      expect(response.body).to include("/transactions?chart_range=3m&amp;range=1m&amp;spending_view=categories")
     end
   end
 
