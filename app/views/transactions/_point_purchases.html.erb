@@ -11,7 +11,7 @@
     <% point.top_purchases.each do |transaction| %>
       <li class="flex items-start gap-3 text-sm">
         <div class="min-w-0 flex-1">
-          <p class="truncate font-medium"><%= transaction.merchant_name.presence || transaction.description %></p>
+          <p class="truncate font-medium"><%= transaction.display_name %></p>
           <p class="truncate text-xs text-base-content/60"><%= [ SpendingBreakdown.label_for(transaction.effective_category), (transaction.date.strftime("%b %-d") unless daily) ].compact.join(" · ") %></p>
         </div>
         <p class="flex-none font-semibold tabular-nums"><%= number_to_currency(transaction.amount) %></p>

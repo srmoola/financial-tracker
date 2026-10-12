@@ -110,6 +110,14 @@ RSpec.describe "Transactions page", type: :request do
     expect(response.body).to include("Old Purchase", "$999.00")
   end
 
+  it "shows Unknown merchant, with the masked statement text, when the card masked the description" do
+    card.transactions.create!(plaid_transaction_id: "masked-1", amount: 63.57, date: Date.current, description: "*********-********", category: "GENERAL_MERCHANDISE")
+
+    get transactions_path
+
+    expect(response.body).to include("Unknown merchant", "· *********-********")
+  end
+
   describe "filtering by category" do
     before do
       add_transaction(amount: 12.5, merchant: "Coffee Shop", category: "FOOD_AND_DRINK")
