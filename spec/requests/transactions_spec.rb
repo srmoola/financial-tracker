@@ -40,6 +40,19 @@ RSpec.describe "Transactions page", type: :request do
       end
     end
 
+    it "lines longer ranges up with the card's statements" do
+      travel_to Date.new(2026, 10, 12) do
+        card.update!(last_statement_issue_date: Date.new(2026, 9, 15))
+        add_transaction(amount: 30, merchant: "Start Of Range", date: Date.new(2026, 6, 16))
+        add_transaction(amount: 40, merchant: "Before Range", date: Date.new(2026, 6, 15))
+
+        get transactions_path(range: "3m")
+
+        expect(response.body).to include("Your last 3 statements and this month, since Jun 16", "Start Of Range")
+        expect(response.body).not_to include("Before Range")
+      end
+    end
+
     it "starts on the 1st for cards without a statement date" do
       travel_to Date.new(2026, 10, 12) do
         add_transaction(amount: 5, merchant: "October Purchase", date: Date.new(2026, 10, 1))

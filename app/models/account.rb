@@ -27,6 +27,12 @@ class Account < ApplicationRecord
     start
   end
 
+  # The start of the statement period `periods_back` statements before the
+  # current one (0 = the current period), e.g. 3 back from Sep 16 is Jun 16.
+  def statement_period_start(periods_back = 0, today: Date.current)
+    current_statement_start(today:) << periods_back
+  end
+
   # Saves today's balance (replacing an earlier one from the same day).
   def record_balance_snapshot(on:)
     return if current_balance.nil?

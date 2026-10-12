@@ -3,6 +3,8 @@
 class TransactionsController < ApplicationController
   PER_PAGE = 25
   RANGES = { "statement" => "This month", "1m" => "1M", "3m" => "3M", "6m" => "6M", "1y" => "1Y" }.freeze
+  # Ranges follow each card's statements: how many full statements before the current period to include.
+  STATEMENTS_BACK = { "statement" => 0, "1m" => 1, "3m" => 3, "6m" => 6, "1y" => 12 }.freeze
   DEFAULT_RANGE = "statement" # each card's current statement period
 
   def index
@@ -11,7 +13,8 @@ class TransactionsController < ApplicationController
     @plaid_items_needing_consent = Current.user.plaid_items.where(statement_dates_status: "needs_consent").to_a
     return if @credit_cards.empty?
 
-    in_range = @range == "statement" ? Transaction.in_current_statements(@credit_cards) : Transaction.where(account: @credit_cards, date: NetWorthHistory.range_start(@range)..)
+    @statements_back = STATEMENTS_BACK.fetch(@range)
+    in_range = Transaction.in_statement_periods(@credit_cards, periods_back: @statements_back)
     @spending = SpendingBreakdown.new(in_range)
     @any_transactions = Transaction.where(account: @credit_cards).exists?
 

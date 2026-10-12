@@ -94,9 +94,30 @@ RSpec.describe "Credit card statement dates" do
     it "falls back to the 1st of the month without a statement date" do
       expect(card.current_statement_start(today:)).to eq(Date.new(2026, 10, 1))
     end
+
+    it "steps back whole statement periods for longer ranges" do
+      card.last_statement_issue_date = Date.new(2026, 9, 15)
+
+      expect([ 0, 1, 3, 12 ].map { |back| card.statement_period_start(back, today:) })
+        .to eq([ Date.new(2026, 9, 16), Date.new(2026, 8, 16), Date.new(2026, 6, 16), Date.new(2025, 9, 16) ])
+    end
+
+    it "uses calendar months for longer ranges without a statement date" do
+      expect(card.statement_period_start(3, today:)).to eq(Date.new(2026, 7, 1))
+    end
   end
 
-  it "Transaction.in_current_statements uses each card's own statement period" do
+  it "Transaction.in_statement_periods counts back whole statements per card" do
+    travel_to(Date.new(2026, 10, 12)) do
+      card.update!(last_statement_issue_date: Date.new(2026, 9, 15))
+      card.transactions.create!(plaid_transaction_id: "jun-16", amount: 1, date: Date.new(2026, 6, 16))
+      card.transactions.create!(plaid_transaction_id: "jun-15", amount: 1, date: Date.new(2026, 6, 15))
+
+      expect(Transaction.in_statement_periods([ card ], periods_back: 3).pluck(:plaid_transaction_id)).to eq([ "jun-16" ])
+    end
+  end
+
+  it "Transaction.in_statement_periods uses each card's own statement period" do
     other_card = item.accounts.create!(plaid_account_id: "card-2", name: "Other card", account_type: "credit", subtype: "credit card")
     travel_to(Date.new(2026, 10, 12)) do
       card.update!(last_statement_issue_date: Date.new(2026, 9, 16))
@@ -106,7 +127,7 @@ RSpec.describe "Credit card statement dates" do
       other_card.transactions.create!(plaid_transaction_id: "in-2", amount: 1, date: Date.new(2026, 10, 3))
       other_card.transactions.create!(plaid_transaction_id: "out-2", amount: 1, date: Date.new(2026, 9, 20))
 
-      expect(Transaction.in_current_statements([ card, other_card ]).pluck(:plaid_transaction_id)).to contain_exactly("in-1", "in-2")
+      expect(Transaction.in_statement_periods([ card, other_card ]).pluck(:plaid_transaction_id)).to contain_exactly("in-1", "in-2")
     end
   end
 end
