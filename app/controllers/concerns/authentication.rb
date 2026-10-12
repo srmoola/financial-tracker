@@ -3,6 +3,7 @@ module Authentication
 
   included do
     before_action :require_authentication
+    before_action :require_verified_email
     helper_method :authenticated?
   end
 
@@ -14,6 +15,11 @@ module Authentication
     def unauthenticated_access_only(**options)
       allow_unauthenticated_access **options
       before_action -> { redirect_to root_path if authenticated? }, **options
+    end
+
+    # For pages a signed-in user can use before confirming their email (e.g. logging out).
+    def allow_unverified_email(**options)
+      skip_before_action :require_verified_email, **options
     end
   end
 
@@ -32,6 +38,11 @@ module Authentication
 
     def find_session_by_cookie
       Session.find_by(id: cookies.signed[:session_id]) if cookies.signed[:session_id]
+    end
+
+    # Signed-in users confirm their email address (with the emailed code) before anything else.
+    def require_verified_email
+      redirect_to email_verification_path if authenticated? && !Current.user.email_verified?
     end
 
     def request_authentication

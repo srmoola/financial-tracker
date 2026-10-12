@@ -22,10 +22,10 @@ RSpec.describe "Sign ups", type: :request do
     expect(response).to redirect_to(root_path)
   end
 
-  it "creates a user with their name and signs them in" do
-    expect { sign_up }.to change(User, :count).by(1)
+  it "creates a user with their name, signs them in and emails a code to confirm their email" do
+    expect { sign_up }.to change(User, :count).by(1).and have_enqueued_mail(EmailVerificationsMailer, :code)
 
-    expect(response).to redirect_to(onboarding_path)
+    expect(response).to redirect_to(email_verification_path)
     expect(cookies[:session_id]).to be_present
     expect(User.find_by!(email_address: "new@example.com")).to have_attributes(first_name: "Ada", last_name: "Lovelace")
   end

@@ -1,0 +1,9 @@
+Hi <%= @user.first_name %>,
+
+Your Financial Tracker code is:
+
+<%= @code %>
+
+Enter it to confirm your email address. It expires in <%= distance_of_time_in_words(0, User::EMAIL_CODE_EXPIRES_IN) %>.
+
+If you didn't sign up for Financial Tracker, you can ignore this email.
