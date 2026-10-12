@@ -70,6 +70,9 @@ RSpec.configure do |config|
   # arbitrary gems may also be filtered via:
   # config.filter_gems_from_backtrace("gem name")
 
+  # travel_to / freeze_time for date-dependent specs.
+  config.include ActiveSupport::Testing::TimeHelpers
+
   # Run system specs in headless Chrome.
   config.before(:each, type: :system) do
     driven_by :selenium, using: :headless_chrome, screen_size: [ 1400, 1400 ]

@@ -10,13 +10,14 @@ RSpec.describe "Connecting accounts with Plaid", type: :request do
   describe "POST /plaid/link_tokens" do
     before { allow(api).to receive(:link_token_create).and_return(Plaid::LinkTokenCreateResponse.new(link_token: "link-sandbox-1")) }
 
-    it "creates a bank link token with Transactions, 90 days of history and bank/card filters" do
+    it "creates a bank link token with Transactions, 2 years of history and bank/card filters" do
       post plaid_link_tokens_path, params: { kind: "bank" }, as: :json
 
       expect(response.parsed_body).to eq("link_token" => "link-sandbox-1")
       expect(api).to have_received(:link_token_create) do |request|
         expect(request.products).to eq([ "transactions" ])
-        expect(request.transactions.days_requested).to eq(90)
+        expect(request.optional_products).to eq([ "liabilities" ])
+        expect(request.transactions.days_requested).to eq(730)
         expect(request.account_filters.depository.account_subtypes).to eq([ "all" ])
         expect(request.account_filters.credit.account_subtypes).to eq([ "credit card" ])
         expect(request.account_filters.investment).to be_nil
@@ -47,6 +48,42 @@ RSpec.describe "Connecting accounts with Plaid", type: :request do
 
       expect(response).to have_http_status(:bad_gateway)
       expect(response.parsed_body["error"]).to include("Couldn't start connecting")
+    end
+  end
+
+  describe "allowing statement dates on an existing connection" do
+    let!(:item) { users(:one).plaid_items.create!(item_id: "item-1", access_token: "access-1", institution_name: "First Platypus Bank", statement_dates_status: "needs_consent") }
+
+    it "creates an update-mode link token asking for Liabilities" do
+      allow(api).to receive(:link_token_create).and_return(Plaid::LinkTokenCreateResponse.new(link_token: "link-update-1"))
+
+      post plaid_link_tokens_path, params: { plaid_item_id: item.id }, as: :json
+
+      expect(response.parsed_body).to eq("link_token" => "link-update-1")
+      expect(api).to have_received(:link_token_create) do |request|
+        expect(request.access_token).to eq("access-1")
+        expect(request.additional_consented_products).to eq([ "liabilities" ])
+        expect(request.products).to be_nil
+      end
+    end
+
+    it "won't create an update-mode token for someone else's connection" do
+      other = users(:two).plaid_items.create!(item_id: "item-2", access_token: "access-2")
+
+      post plaid_link_tokens_path, params: { plaid_item_id: other.id }, as: :json
+
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it "fetches statement dates after the user allows them" do
+      allow(api).to receive(:liabilities_get).and_raise(plaid_api_error("NO_LIABILITY_ACCOUNTS"))
+      item.accounts.create!(plaid_account_id: "card-1", name: "Card", account_type: "credit", subtype: "credit card")
+
+      post statement_dates_plaid_item_path(item), params: { from: "transactions" }, as: :json
+
+      expect(response.parsed_body).to eq("redirect_url" => transactions_path)
+      expect(item.reload.statement_dates_status).to eq("unsupported")
+      expect(flash[:notice]).to include("doesn't share statement dates")
     end
   end
 

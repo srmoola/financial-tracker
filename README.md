@@ -22,6 +22,9 @@ Services:
 - `jobs`: Solid Queue worker (`bin/jobs`)
 
 Run commands inside the app container with `docker compose exec web bin/rails ...`.
+
+After running a migration with `docker compose exec web bin/rails db:migrate`, restart the app processes with `docker compose restart web jobs`. The running server and job worker cache the database's column list, so until they restart they read new columns but silently skip writing them. (Restarting `web` also runs `db:prepare`, so `docker compose restart web jobs` on its own applies pending migrations.)
+
 After changing the Gemfile, rebuild with `docker compose build`.
 
 ## Production image

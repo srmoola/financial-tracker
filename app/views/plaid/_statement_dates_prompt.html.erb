@@ -1,0 +1,13 @@
+<%# locals: (plaid_items:, from:) %>
+<%# One-time step for connections made before we asked Plaid for statement dates (Liabilities). %>
+<% plaid_items.each do |plaid_item| %>
+  <div role="status" class="alert alert-info alert-soft flex flex-wrap items-center gap-3"
+       data-controller="plaid-link" data-plaid-link-from-value="<%= from %>" data-plaid-link-item-id-value="<%= plaid_item.id %>">
+    <div class="min-w-0 flex-1">
+      <p class="font-semibold">Match "This month" to your <%= plaid_item.institution_name.presence || "card" %> statement</p>
+      <p class="text-sm">Allow Plaid to share statement dates for this connection. It's a quick re-approval and doesn't add a new connection.</p>
+      <p role="alert" class="mt-1 text-sm text-error" data-plaid-link-target="error" hidden></p>
+    </div>
+    <button type="button" class="btn btn-sm btn-primary" data-plaid-link-target="button" data-action="plaid-link#open">Enable statement dates</button>
+  </div>
+<% end %>

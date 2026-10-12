@@ -50,6 +50,9 @@ Rails.application.configure do
   # Set localhost to be used by links generated in mailer templates.
   config.action_mailer.default_url_options = { host: "localhost", port: 3000 }
 
+  # Docker Compose's health check hits /up every few seconds; keep it out of the logs.
+  config.silence_healthcheck_path = "/up"
+
   # Print deprecation notices to the Rails logger.
   config.active_support.deprecation = :log
 
