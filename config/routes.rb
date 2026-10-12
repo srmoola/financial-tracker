@@ -2,6 +2,11 @@ Rails.application.routes.draw do
   resource :session
   resources :passwords, param: :token
   resource :sign_up, only: %i[ show create ]
+
+  # App sections that aren't built yet. Each gets a placeholder page until its real controller exists.
+  %w[ transactions budgets subscriptions taxes ].each do |section|
+    get section, to: "coming_soon#show", defaults: { section: section }, as: section
+  end
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.

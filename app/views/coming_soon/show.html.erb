@@ -1,0 +1,16 @@
+<% content_for :title, "#{@section.label} · Financial Tracker" %>
+
+<h1 class="text-3xl font-bold tracking-tight"><%= @section.label %></h1>
+
+<div class="card mt-8 border border-base-300 bg-base-100">
+  <div class="card-body items-center gap-4 p-10 text-center sm:p-14">
+    <div class="grid size-14 place-items-center rounded-2xl bg-base-200">
+      <%= nav_icon(@section, size: "size-7") %>
+    </div>
+    <div>
+      <h2 class="text-xl font-bold tracking-tight"><%= @section.label %> are on the way</h2>
+      <p class="mt-1 max-w-md text-base-content/70"><%= @description %></p>
+    </div>
+    <span class="badge badge-soft badge-secondary">Coming soon</span>
+  </div>
+</div>
