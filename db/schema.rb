@@ -25,6 +25,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_12_001728) do
     t.decimal "current_balance", precision: 19, scale: 4
     t.decimal "available_balance", precision: 19, scale: 4
     t.decimal "credit_limit", precision: 19, scale: 4
+    t.string "transaction_sync_cursor"
     t.datetime "last_synced_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -38,7 +39,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_12_001728) do
     t.string "access_token", null: false
     t.string "institution_id"
     t.string "institution_name"
-    t.string "transactions_sync_cursor"
     t.datetime "last_synced_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false

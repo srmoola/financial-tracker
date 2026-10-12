@@ -11,6 +11,7 @@ class CreateAccounts < ActiveRecord::Migration[8.1]
       t.decimal :current_balance, precision: 19, scale: 4 # for credit accounts, the amount owed
       t.decimal :available_balance, precision: 19, scale: 4
       t.decimal :credit_limit, precision: 19, scale: 4
+      t.string :transaction_sync_cursor # next_cursor from /transactions/sync called with this account_id
       t.datetime :last_synced_at
 
       t.timestamps

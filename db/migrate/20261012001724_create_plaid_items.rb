@@ -6,7 +6,6 @@ class CreatePlaidItems < ActiveRecord::Migration[8.1]
       t.string :access_token, null: false # encrypted (see PlaidItem)
       t.string :institution_id
       t.string :institution_name
-      t.string :transactions_sync_cursor # next_cursor from /transactions/sync, which is per Item
       t.datetime :last_synced_at
 
       t.timestamps
