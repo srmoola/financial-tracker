@@ -13,8 +13,13 @@
     </div>
   </section>
 <% else %>
-  <% range_text = @range == "statement" ? "this statement period" : statement_range_start(@credit_cards, @statements_back) %>
-  <% range_heading = statement_range_heading(@credit_cards, @statements_back) %>
+  <% if @range == "all" %>
+    <% range_text = "yet" %>
+    <% range_heading = @earliest_date ? "All time, since #{@earliest_date.strftime("%b %-d, %Y")}" : "All time" %>
+  <% else %>
+    <% range_text = @range == "statement" ? "this statement period" : statement_range_start(@credit_cards, @statements_back) %>
+    <% range_heading = statement_range_heading(@credit_cards, @statements_back) %>
+  <% end %>
   <% category_label = @category && (@spending.categories.find { |category| category.param == @category }&.label || SpendingBreakdown.label_for(@category == "uncategorized" ? nil : @category)) %>
 
   <%# Everything below updates in place (range, category, page) without reloading the page. %>

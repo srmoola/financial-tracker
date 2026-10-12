@@ -53,6 +53,22 @@ RSpec.describe "Transactions page", type: :request do
       end
     end
 
+    it "has an All range covering every transaction, saying how far back it goes" do
+      travel_to Date.new(2026, 10, 12) do
+        card.update!(last_statement_issue_date: Date.new(2026, 9, 15))
+        add_transaction(amount: 25, merchant: "Two Years Ago", date: Date.new(2024, 10, 14))
+        add_transaction(amount: 10, merchant: "Recent", date: Date.new(2026, 10, 1))
+
+        get transactions_path(range: "all")
+
+        expect(response.body).to include("All time, since Oct 14, 2024", "Two Years Ago", "Recent", "$35.00")
+        expect(response.body).to match(%r{<a [^>]*tab-active[^>]*>All</a>})
+
+        get transactions_path(range: "1y")
+        expect(response.body).not_to include("Two Years Ago")
+      end
+    end
+
     it "starts on the 1st for cards without a statement date" do
       travel_to Date.new(2026, 10, 12) do
         add_transaction(amount: 5, merchant: "October Purchase", date: Date.new(2026, 10, 1))

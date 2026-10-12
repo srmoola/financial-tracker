@@ -2,8 +2,9 @@
 # the chosen time range. Clicking a spending category filters the list to it.
 class TransactionsController < ApplicationController
   PER_PAGE = 25
-  RANGES = { "statement" => "This month", "1m" => "1M", "3m" => "3M", "6m" => "6M", "1y" => "1Y" }.freeze
-  # Ranges follow each card's statements: how many full statements before the current period to include.
+  RANGES = { "statement" => "This month", "1m" => "1M", "3m" => "3M", "6m" => "6M", "1y" => "1Y", "all" => "All" }.freeze
+  # Ranges follow each card's statements: how many full statements before the current period to
+  # include. "all" isn't here: it has no start date.
   STATEMENTS_BACK = { "statement" => 0, "1m" => 1, "3m" => 3, "6m" => 6, "1y" => 12 }.freeze
   DEFAULT_RANGE = "statement" # each card's current statement period
 
@@ -13,8 +14,14 @@ class TransactionsController < ApplicationController
     @plaid_items_needing_consent = Current.user.plaid_items.where(statement_dates_status: "needs_consent").to_a
     return if @credit_cards.empty?
 
-    @statements_back = STATEMENTS_BACK.fetch(@range)
-    in_range = Transaction.in_statement_periods(@credit_cards, periods_back: @statements_back)
+    @statements_back = STATEMENTS_BACK[@range]
+    in_range =
+      if @statements_back
+        Transaction.in_statement_periods(@credit_cards, periods_back: @statements_back)
+      else
+        Transaction.where(account: @credit_cards)
+      end
+    @earliest_date = in_range.minimum(:date) if @range == "all"
     @spending = SpendingBreakdown.new(in_range)
     @any_transactions = Transaction.where(account: @credit_cards).exists?
 
