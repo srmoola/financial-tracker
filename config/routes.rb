@@ -23,6 +23,8 @@ Rails.application.routes.draw do
 
   # The Monday summary email: on/off, by token from the email or from the Accounts page
   resource :weekly_email, only: %i[ show update create ]
+  resource :settings, only: :show
+  resource :avatar, only: %i[ show update destroy ]
 
   resources :budgets do
     resources :exclusions, only: %i[ create destroy ], controller: "budget_exclusions"

@@ -32,14 +32,14 @@ RSpec.describe "Turning the weekly email on and off", type: :request do
     expect(response).to have_http_status(:not_found)
   end
 
-  it "can be turned off and on from the Accounts page" do
+  it "can be turned off and on from the Settings page" do
     sign_in_as users(:one)
 
-    get accounts_path
+    get settings_path
     expect(response.body).to include("Weekly summary", "Turn off")
 
     patch weekly_email_path, params: { enabled: "0" }
-    expect(response).to redirect_to(accounts_path)
+    expect(response).to redirect_to(settings_path)
     expect(users(:one).reload.weekly_digest).to be(false)
     follow_redirect!
     expect(response.body).to include("You won&#39;t get weekly emails anymore.", "Turn on")

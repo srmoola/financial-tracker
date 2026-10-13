@@ -33,10 +33,13 @@
           </nav>
 
           <div class="flex items-center gap-3 border-t border-base-300 px-6 py-4">
-            <div class="min-w-0 flex-1">
-              <p class="truncate text-sm font-semibold"><%= Current.user.full_name %></p>
-              <p class="truncate text-xs text-base-content/60"><%= Current.user.email_address %></p>
-            </div>
+            <%= link_to settings_path, class: "flex min-w-0 flex-1 items-center gap-3", title: "Settings" do %>
+              <%= user_avatar(Current.user) %>
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-sm font-semibold"><%= Current.user.full_name %></p>
+                <p class="truncate text-xs text-base-content/60">Settings</p>
+              </div>
+            <% end %>
             <%= button_to "Log out", session_path, method: :delete, class: "btn btn-ghost btn-sm" %>
           </div>
         </dialog>
@@ -66,18 +69,16 @@
         </ul>
 
         <div class="mt-auto border-t border-base-300 pt-4">
-          <div class="flex items-center gap-3 px-2">
-            <div class="avatar avatar-placeholder">
-              <div class="w-9 rounded-full bg-primary text-primary-content">
-                <span class="text-sm font-semibold"><%= Current.user.initials %></span>
-              </div>
-            </div>
+          <%= link_to settings_path, class: class_names("flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-base-200", "bg-base-200": current_page?(settings_path)),
+                title: "Settings", aria: { current: current_page?(settings_path) ? "page" : nil } do %>
+            <%= user_avatar(Current.user) %>
             <div class="min-w-0 flex-1">
               <p class="truncate text-sm font-semibold"><%= Current.user.full_name %></p>
               <p class="truncate text-xs text-base-content/60"><%= Current.user.email_address %></p>
             </div>
-          </div>
-          <%= button_to "Log out", session_path, method: :delete, class: "btn btn-ghost btn-sm btn-block mt-3 justify-start" %>
+            <svg class="size-4 shrink-0 text-base-content/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          <% end %>
+          <%= button_to "Log out", session_path, method: :delete, class: "btn btn-ghost btn-sm btn-block mt-2 justify-start" %>
         </div>
       </aside>
     </div>

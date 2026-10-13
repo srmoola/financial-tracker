@@ -100,7 +100,9 @@ class Account < ApplicationRecord
         category: plaid_transaction.personal_finance_category&.primary,
         latitude: plaid_transaction.location&.lat,
         longitude: plaid_transaction.location&.lon,
-        payment_channel: plaid_transaction.payment_channel
+        payment_channel: plaid_transaction.payment_channel,
+        logo_url: plaid_transaction.logo_url,
+        website: plaid_transaction.website
       )
       BudgetExclusion.where(transaction_id: pending.id).update_all(transaction_id: record.id) if pending
     end

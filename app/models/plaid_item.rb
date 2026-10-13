@@ -31,6 +31,7 @@ class PlaidItem < ApplicationRecord
   # accounts we import transactions for, for now).
   def sync!
     sync_balances!
+    sync_institution_details!
     sync_statement_dates! unless statement_dates_status.in?(%w[ needs_consent unsupported ])
     accounts.credit_cards.find_each(&:sync_transactions!)
   end
@@ -75,6 +76,19 @@ class PlaidItem < ApplicationRecord
     end
 
     destroy!
+  end
+
+  # Saves the bank's website and logo from Plaid, once it has either. Not worth
+  # failing the sync over, so a Plaid error is just logged.
+  def sync_institution_details!
+    return if institution_id.blank? || institution_url || institution_logo
+
+    institution = PlaidClient.api.institutions_get_by_id(Plaid::InstitutionsGetByIdRequest.new(
+      institution_id:, country_codes: [ "US" ], options: Plaid::InstitutionsGetByIdRequestOptions.new(include_optional_metadata: true)
+    )).institution
+    update!(institution_url: institution.url.presence, institution_logo: institution.logo.presence)
+  rescue Plaid::ApiError => error
+    Rails.logger.warn("Couldn't get #{institution_id}'s details from Plaid: #{PlaidClient.error_code(error)}")
   end
 
   # Fetches accounts and their (cached, free) balances from Plaid, updates

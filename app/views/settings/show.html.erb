@@ -1,0 +1,41 @@
+<% content_for :title, "Settings · Financial Tracker" %>
+
+<h1 class="text-3xl font-bold tracking-tight">Settings</h1>
+
+<section class="mt-8" aria-labelledby="profile-heading">
+  <h2 id="profile-heading" class="text-lg font-bold tracking-tight">Profile</h2>
+  <div class="card mt-3 border border-base-300 bg-base-100">
+    <div class="flex flex-wrap items-center gap-5 p-5 sm:px-6">
+      <%= user_avatar(Current.user, size: "size-20", text: "text-2xl") %>
+      <div class="min-w-0 flex-1">
+        <p class="truncate text-lg font-semibold"><%= Current.user.full_name %></p>
+        <p class="truncate text-sm text-base-content/60"><%= Current.user.email_address %></p>
+        <div class="mt-3 flex flex-wrap items-center gap-2">
+          <%= form_with url: avatar_path, method: :patch, multipart: true, data: { controller: "auto-submit" } do |form| %>
+            <label class="btn btn-sm">
+              <%= Current.user.avatar_version ? "Change photo" : "Upload a photo" %>
+              <%= form.file_field :avatar, accept: "image/*", class: "hidden", data: { action: "change->auto-submit#submit" } %>
+            </label>
+          <% end %>
+          <% if Current.user.avatar_version %>
+            <%= button_to "Remove", avatar_path, method: :delete, class: "btn btn-ghost btn-sm text-base-content/70" %>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mt-10" aria-labelledby="emails-heading">
+  <h2 id="emails-heading" class="text-lg font-bold tracking-tight">Emails</h2>
+  <div class="card mt-3 border border-base-300 bg-base-100">
+    <div class="flex flex-wrap items-center justify-between gap-4 p-5 sm:px-6">
+      <div class="min-w-0">
+        <p class="font-semibold">Weekly summary <span class="badge badge-soft badge-sm ml-1 <%= Current.user.weekly_digest? ? "badge-success" : "badge-ghost" %>"><%= Current.user.weekly_digest? ? "On" : "Off" %></span></p>
+        <p class="text-sm text-base-content/60">Every Monday: new spending, budgets, net worth, and anything that failed to sync.</p>
+      </div>
+      <%= button_to Current.user.weekly_digest? ? "Turn off" : "Turn on", weekly_email_path, method: :patch,
+            params: { enabled: Current.user.weekly_digest? ? "0" : "1" }, class: "btn btn-sm" %>
+    </div>
+  </div>
+</section>

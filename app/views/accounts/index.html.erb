@@ -27,11 +27,15 @@
         <% accounts = sorted_accounts(plaid_item.accounts) %>
         <div class="card border border-base-300 bg-base-100" data-controller="dialog">
           <div class="flex items-center gap-4 px-5 py-4 sm:px-6">
-            <div class="grid size-11 shrink-0 place-items-center rounded-xl bg-primary text-sm font-bold text-primary-content" aria-hidden="true">
-              <%= institution_initials(institution) %>
-            </div>
+            <% if plaid_item.institution_logo %>
+              <%= image_tag "data:image/png;base64,#{plaid_item.institution_logo}", alt: "", class: "size-11 shrink-0 rounded-xl border border-base-300 bg-white object-contain p-1" %>
+            <% else %>
+              <div class="grid size-11 shrink-0 place-items-center rounded-xl bg-primary text-sm font-bold text-primary-content" aria-hidden="true">
+                <%= institution_initials(institution) %>
+              </div>
+            <% end %>
             <div class="min-w-0 flex-1">
-              <h3 class="text-lg leading-tight font-bold tracking-tight break-words"><%= institution %></h3>
+              <h3 class="text-lg leading-tight font-bold tracking-tight break-words"><%= website_link(institution, plaid_item.institution_url, class: "hover:underline") %></h3>
               <p class="text-xs text-base-content/60">
                 <%= pluralize(accounts.size, "account") %>
                 <% if plaid_item.last_synced_at %>· updated <%= time_ago_in_words(plaid_item.last_synced_at) %> ago<% end %>
@@ -87,16 +91,3 @@
   <% end %>
 </section>
 
-<section class="mt-10" aria-labelledby="emails-heading">
-  <h2 id="emails-heading" class="text-lg font-bold tracking-tight">Emails</h2>
-  <div class="card mt-3 border border-base-300 bg-base-100">
-    <div class="flex flex-wrap items-center justify-between gap-4 p-5 sm:px-6">
-      <div class="min-w-0">
-        <p class="font-semibold">Weekly summary <span class="badge badge-soft badge-sm ml-1 <%= Current.user.weekly_digest? ? "badge-success" : "badge-ghost" %>"><%= Current.user.weekly_digest? ? "On" : "Off" %></span></p>
-        <p class="text-sm text-base-content/60">Every Monday: new spending, budgets, net worth, and anything that failed to sync.</p>
-      </div>
-      <%= button_to Current.user.weekly_digest? ? "Turn off" : "Turn on", weekly_email_path, method: :patch,
-            params: { enabled: Current.user.weekly_digest? ? "0" : "1" }, class: "btn btn-sm" %>
-    </div>
-  </div>
-</section>

@@ -24,6 +24,14 @@ RSpec.describe Subscription do
     expect([ spotify.monthly_cost, spotify.yearly_cost ]).to eq([ 6.99, 83.88 ])
   end
 
+  it "shows the merchant's logo and website from the latest charge that has them" do
+    [ Date.new(2026, 8, 10), Date.new(2026, 9, 10), Date.new(2026, 10, 10) ].each { |date| charge(6.99, date) }
+    card.transactions.order(:date).first.update!(logo_url: "https://logos.example/old.png", website: "spotify.com")
+    card.transactions.order(:date).second.update!(logo_url: "https://logos.example/spotify.png")
+
+    expect(subscriptions.sole).to have_attributes(logo_url: "https://logos.example/spotify.png", website: "spotify.com")
+  end
+
   it "suggests two charges of exactly the same amount a month apart, but not two different amounts" do
     charge(15.49, Date.new(2026, 9, 1), merchant: "Netflix")
     charge(15.49, Date.new(2026, 10, 1), merchant: "Netflix")

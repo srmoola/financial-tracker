@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_14_210000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_14_220200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -41,6 +41,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_14_210000) do
     t.date "last_statement_issue_date"
     t.index ["plaid_account_id"], name: "index_accounts_on_plaid_account_id", unique: true
     t.index ["plaid_item_id"], name: "index_accounts_on_plaid_item_id"
+  end
+
+  create_table "avatars", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "user_id", null: false
+    t.binary "image", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id"], name: "index_avatars_on_user_id", unique: true
   end
 
   create_table "budget_alerts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -94,6 +102,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_14_210000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "statement_dates_status"
+    t.string "institution_url"
+    t.text "institution_logo"
     t.index ["item_id"], name: "index_plaid_items_on_item_id", unique: true
     t.index ["user_id"], name: "index_plaid_items_on_user_id"
   end
@@ -320,6 +330,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_14_210000) do
     t.datetime "updated_at", null: false
     t.string "category_override"
     t.text "note"
+    t.string "logo_url"
+    t.string "website"
     t.index ["account_id", "date"], name: "index_transactions_on_account_id_and_date"
     t.index ["account_id"], name: "index_transactions_on_account_id"
     t.index ["plaid_transaction_id"], name: "index_transactions_on_plaid_transaction_id", unique: true
@@ -342,6 +354,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_14_210000) do
 
   add_foreign_key "account_balance_snapshots", "accounts"
   add_foreign_key "accounts", "plaid_items"
+  add_foreign_key "avatars", "users", on_delete: :cascade
   add_foreign_key "budget_alerts", "budgets"
   add_foreign_key "budget_exclusions", "budgets", on_delete: :cascade
   add_foreign_key "budget_exclusions", "transactions", on_delete: :cascade

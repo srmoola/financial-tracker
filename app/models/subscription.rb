@@ -19,7 +19,7 @@ class Subscription
   NEW_FOR = 7.days
   PRICE_CHANGE = 0.25 # the most a charge on schedule can differ and still be the same subscription
 
-  Charge = Data.define(:id, :account_id, :date, :amount, :arrived_at)
+  Charge = Data.define(:id, :account_id, :date, :amount, :arrived_at, :logo_url, :website)
 
   attr_reader :merchant, :period, :charges, :status, :account, :mark
 
@@ -29,16 +29,16 @@ class Subscription
     accounts = user.accounts.credit_cards.index_by(&:id)
     charges = Transaction.where(account: accounts.values, date: (today - HISTORY)..).where("transactions.amount > 0")
       .where("#{Transaction::EFFECTIVE_CATEGORY_SQL} IS NULL OR #{Transaction::EFFECTIVE_CATEGORY_SQL} NOT IN (?)", Budget::NOT_SPENDING)
-      .order(:date).pluck(:id, :account_id, :merchant_name, :description, :date, :amount, :created_at)
-      .filter_map { |id, account_id, merchant_name, description, date, amount, created_at|
+      .order(:date).pluck(:id, :account_id, :merchant_name, :description, :date, :amount, :created_at, :logo_url, :website)
+      .filter_map { |id, account_id, merchant_name, description, date, amount, created_at, logo_url, website|
         merchant = Transaction.merchant_key(merchant_name, description)
-        [ merchant, Charge.new(id:, account_id:, date:, amount:, arrived_at: created_at) ] if merchant
+        [ merchant, Charge.new(id:, account_id:, date:, amount:, arrived_at: created_at, logo_url:, website:) ] if merchant
       }.group_by(&:first).transform_values { |pairs| pairs.map(&:last) }
 
     found = charges.flat_map { |merchant, merchant_charges| groups(merchant_charges).filter_map { |group| detect(merchant, group, marks, accounts, today) } }
     added = marks.select { |mark| mark.kind == "added" && found.none? { |subscription| mark.matches?(subscription) } }.map do |mark|
       same = charges.fetch(mark.merchant, []).select { |charge| close?(charge.amount, mark.amount) }
-      same = [ Charge.new(id: nil, account_id: nil, date: mark.charged_on, amount: mark.amount, arrived_at: mark.created_at) ] if same.empty?
+      same = [ Charge.new(id: nil, account_id: nil, date: mark.charged_on, amount: mark.amount, arrived_at: mark.created_at, logo_url: nil, website: nil) ] if same.empty?
       new(mark.merchant, mark.period, same, accounts, today, confirmed: true, added: true, mark:)
     end
 
@@ -107,6 +107,9 @@ class Subscription
   def monthly_cost = period == "monthly" ? amount : amount / 12
   def yearly_cost = period == "monthly" ? amount * 12 : amount
   def label = PERIODS.fetch(period)[:label]
+  # The merchant's logo and website (from Plaid), from the latest charge that has them.
+  def logo_url = charges.reverse_each.find(&:logo_url)&.logo_url
+  def website = charges.reverse_each.find(&:website)&.website
   def tags = mark&.tags || []
 
   # Found (its second charge came in) during `times`; added-by-hand ones aren't news.
