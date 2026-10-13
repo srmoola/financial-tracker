@@ -23,7 +23,9 @@ RSpec.describe Budget do
 
     expect(invalid).not_to be_valid
     expect(invalid.errors.full_messages).to include("Name can't be blank", "Amount must be greater than 0", "Period is not included in the list", "Pick at least one category or merchant")
-    expect(user.budgets.new(name: "Payments", amount: 10, period: "weekly", categories: %w[ LOAN_PAYMENTS ])).not_to be_valid
+    expect(user.budgets.new(name: "Payments", amount: 10, categories: %w[ LOAN_PAYMENTS ])).not_to be_valid
+    expect(user.budgets.new(name: "Coffee", amount: 10, period: "weekly", categories: %w[ FOOD_AND_DRINK ])).not_to be_valid # monthly only, for now
+    expect(user.budgets.new.period).to eq("monthly")
   end
 
   it "counts this statement month's purchases in its categories, minus refunds" do
@@ -38,16 +40,6 @@ RSpec.describe Budget do
 
     expect(status).to have_attributes(spent: 37, starts_on: Date.new(2026, 9, 16), resets_on: Date.new(2026, 10, 16))
     expect(status.percent).to eq(18.5)
-  end
-
-  it "counts weeks from Monday" do
-    card
-    spend(20, Date.new(2026, 10, 12)) # Monday
-    spend(80, Date.new(2026, 10, 11)) # the Sunday before
-
-    status = budget(period: "weekly").status
-
-    expect(status).to have_attributes(spent: 20, starts_on: Date.new(2026, 10, 12), resets_on: Date.new(2026, 10, 19))
   end
 
   it "also counts picked merchants in any category, but never card payments or transfers" do
@@ -70,16 +62,15 @@ RSpec.describe Budget do
 
   it "is on track, over pace (spending faster than the period passes) or over" do
     card
-    going_out = budget(amount: 1000) # Oct 14 is day 29 of 30: 96.7% of the period passed
-    expect(going_out.status.state).to eq(:on_track)
+    travel_to Date.new(2026, 9, 20) # day 5 of Sep 16 – Oct 15: 16.7% of the period passed
+    going_out = budget
 
-    spend(150, Date.new(2026, 10, 13))
-    weekly = budget(period: "weekly", amount: 300) # Wednesday: 3 of 7 days, 42.9% passed; 50% spent
-    expect(weekly.status.state).to eq(:on_track)
-    spend(30, Date.new(2026, 10, 13)) # 60%: more than 10 points ahead
-    expect(weekly.status.state).to eq(:over_pace)
-    spend(150, Date.new(2026, 10, 13))
-    expect(weekly.status.state).to eq(:over)
+    spend(40, Date.new(2026, 9, 18)) # 20%
+    expect(going_out.status.state).to eq(:on_track)
+    spend(20, Date.new(2026, 9, 19)) # 30%: more than 10 points ahead
+    expect(going_out.status.state).to eq(:over_pace)
+    spend(150, Date.new(2026, 9, 19))
+    expect(going_out.status.state).to eq(:over)
   end
 
   describe "history" do
@@ -94,20 +85,6 @@ RSpec.describe Budget do
       expect(history.map { |status, partial| [ status.starts_on, status.resets_on, status.spent, status.over?, partial ] }).to eq([
         [ Date.new(2026, 8, 16), Date.new(2026, 9, 16), 250, true, false ],
         [ Date.new(2026, 7, 16), Date.new(2026, 8, 16), 80, false, true ]
-      ])
-    end
-
-    it "lists past weeks from Monday to Sunday" do
-      card
-      spend(20, Date.new(2026, 10, 5))  # Monday of last week
-      spend(15, Date.new(2026, 10, 11)) # Sunday of last week
-      spend(9, Date.new(2026, 9, 28))   # the week before
-
-      history = budget(period: "weekly", amount: 30).history(8)
-
-      expect(history.map { |status, _| [ status.starts_on, status.spent, status.over? ] }).to eq([
-        [ Date.new(2026, 10, 5), 35, true ],
-        [ Date.new(2026, 9, 28), 9, false ]
       ])
     end
 
@@ -148,17 +125,6 @@ RSpec.describe Budget do
 
       expect(going_out.status(back: 1)).to have_attributes(limit: 200, carried: 0)
       expect(going_out.status).to have_attributes(limit: 400, carried: 200) # nothing spent last period
-    end
-
-    it "rolls weeks over too" do
-      card
-      travel_to Date.new(2026, 9, 30)
-      coffee = budget(period: "weekly", amount: 30, rollover: true)
-      travel_to Date.new(2026, 10, 14)
-      spend(10, Date.new(2026, 9, 29))  # week of Sep 28: $20 left
-      spend(45, Date.new(2026, 10, 6))  # week of Oct 5: limit $50, $5 left
-
-      expect(coffee.status).to have_attributes(limit: 35, carried: 5)
     end
 
     it "uses the plain limit again once it's turned off, and counts afresh if turned back on" do

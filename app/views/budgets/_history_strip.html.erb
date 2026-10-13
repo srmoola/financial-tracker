@@ -2,7 +2,7 @@
 <%# How the last few periods went, oldest on the left: each bar is that period's spending,
     on a scale up to 125% of its limit (which can include rollover), with the limit as a dashed
     line. Faded bars have partial data. %>
-<% noun = budget.weekly? ? "week" : "month" %>
+<% noun = "month" %>
 <% complete = history.reject(&:last) %>
 <% if history.any? %>
   <div>
@@ -25,7 +25,7 @@
             <div class="absolute inset-x-0 top-[20%] border-t border-dashed border-base-content/30"></div>
             <div class="<%= class_names("absolute inset-x-0 bottom-0 rounded-t-sm", status.over? ? "bg-error" : "bg-base-content/70", "opacity-40": partial) %>" style="height: <%= height.round(1) %>%"></div>
           </div>
-          <span class="max-w-full truncate text-[10px] text-base-content/60" aria-hidden="true"><%= status.starts_on.strftime(budget.weekly? ? "%-m/%-d" : "%b") %></span>
+          <span class="max-w-full truncate text-[10px] text-base-content/60" aria-hidden="true"><%= status.starts_on.strftime("%b") %></span>
           <span class="sr-only"><%= label %>: <%= number_to_currency(status.spent) %> of <%= number_to_currency(status.limit) %>, <%= status.over? ? "over budget" : "under budget" %><%= ", partial data" if partial %></span>
         </li>
       <% end %>

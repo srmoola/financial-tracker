@@ -1,4 +1,4 @@
-# Spending limits for a week or a statement month, over chosen categories and merchants.
+# Monthly spending limits (by statement month), over chosen categories and merchants.
 class BudgetsController < ApplicationController
   MERCHANT_CHOICES = 60
 
@@ -17,7 +17,7 @@ class BudgetsController < ApplicationController
   end
 
   def new
-    @budget = Current.user.budgets.new(period: "monthly")
+    @budget = Current.user.budgets.new
   end
 
   def create
@@ -63,6 +63,6 @@ class BudgetsController < ApplicationController
     end
 
     def budget_params
-      params.expect(budget: [ :name, :amount, :period, :rollover, categories: [], merchants: [] ])
+      params.expect(budget: [ :name, :amount, :rollover, categories: [], merchants: [] ])
     end
 end

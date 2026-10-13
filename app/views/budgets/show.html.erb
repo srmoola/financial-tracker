@@ -12,13 +12,13 @@
 
 <section class="mt-10 max-w-2xl" aria-labelledby="history-heading">
   <h2 id="history-heading" class="text-lg font-bold tracking-tight">History</h2>
-  <p class="text-sm text-base-content/60">Each past <%= @budget.weekly? ? "week" : "statement month" %>, judged against this budget as it is now.</p>
+  <p class="text-sm text-base-content/60">Each past statement month, judged against this budget as it is now.</p>
 
   <% if @history.empty? %>
     <div class="card mt-3 border border-dashed border-base-300 bg-base-100">
       <div class="card-body items-center p-10 text-center">
         <p class="font-semibold">No history yet</p>
-        <p class="text-sm text-base-content/60">Past <%= @budget.weekly? ? "weeks" : "months" %> show up here once you have transactions from before this one.</p>
+        <p class="text-sm text-base-content/60">Past months show up here once you have transactions from before this one.</p>
       </div>
     </div>
   <% else %>

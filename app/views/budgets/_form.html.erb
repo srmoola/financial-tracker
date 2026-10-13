@@ -16,7 +16,7 @@
       <%= form.text_field :name, required: true, maxlength: 50, placeholder: "Going out", class: "input input-lg w-full" %>
     </div>
     <div>
-      <%= form.label :amount, "Limit", class: "mb-1.5 block text-sm font-medium" %>
+      <%= form.label :amount, "Monthly limit", class: "mb-1.5 block text-sm font-medium" %>
       <label class="input input-lg w-full">
         <span class="text-base-content/60">$</span>
         <%= form.number_field :amount, required: true, min: 1, step: 0.01, placeholder: "500", value: (budget.amount&.to_s("F")&.delete_suffix(".0")), class: "grow" %>
@@ -24,26 +24,11 @@
     </div>
   </div>
 
-  <fieldset>
-    <legend class="mb-2 text-sm font-medium">Period</legend>
-    <div class="grid gap-3 sm:grid-cols-2">
-      <% { "weekly" => "Monday to Sunday, every week.", "monthly" => "Follows your card's statement month." }.each do |period, description| %>
-        <label class="flex cursor-pointer items-start gap-3 rounded-box border border-base-300 p-4 has-checked:border-base-content has-checked:bg-base-200/50">
-          <%= form.radio_button :period, period, class: "radio radio-sm mt-0.5" %>
-          <span>
-            <span class="block font-semibold"><%= Budget::PERIODS.fetch(period) %></span>
-            <span class="block text-sm text-base-content/60"><%= description %></span>
-          </span>
-        </label>
-      <% end %>
-    </div>
-  </fieldset>
-
   <label class="flex cursor-pointer items-start gap-3">
     <%= form.check_box :rollover, class: "toggle toggle-sm mt-0.5" %>
     <span>
       <span class="block text-sm font-medium">Roll over what's left</span>
-      <span class="block text-sm text-base-content/60">Money you don't spend carries into the next period. Going over doesn't take from the next one.</span>
+      <span class="block text-sm text-base-content/60">Money you don't spend carries into the next month. Going over doesn't take from the next one.</span>
     </span>
   </label>
 

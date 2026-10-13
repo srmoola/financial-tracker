@@ -1,11 +1,11 @@
-# A spending limit for a week (Monday to Sunday) or a statement month (each
-# card's statement period), over any mix of categories and merchants: a
+# A spending limit for a statement month (each card's statement period; there
+# are no weekly budgets for now), over any mix of categories and merchants: a
 # purchase counts if it's in one of the categories or from one of the
 # merchants. Refunds lower the spending; card payments, transfers and income
 # never count. Budgets can overlap. With rollover, what's left of a period's
 # limit is added to the next one's (going over doesn't take any away).
 class Budget < ApplicationRecord
-  PERIODS = { "weekly" => "Weekly", "monthly" => "Monthly" }.freeze
+  PERIODS = { "monthly" => "Monthly" }.freeze
   ALERT_THRESHOLDS = [ 50, 90, 100 ].freeze
   NOT_SPENDING = %w[ LOAN_PAYMENTS TRANSFER_IN TRANSFER_OUT INCOME ].freeze
   CATEGORIES = (Transaction::CATEGORIES - NOT_SPENDING).freeze
@@ -46,7 +46,7 @@ class Budget < ApplicationRecord
   # Rollover counts from when it's turned on, not from the start of the data.
   before_save -> { self.rollover_started_on = (Date.current if rollover?) }, if: :rollover_changed?
 
-  def weekly? = period == "weekly"
+  attribute :period, :string, default: "monthly"
 
   # This period's numbers, or with `back`, a past period's (1 = the one before
   # this, and so on), judged at its end.
@@ -114,10 +114,9 @@ class Budget < ApplicationRecord
       totals = Hash.new(0)
       return totals if cards.empty?
 
-      this_week = today.beginning_of_week(:monday)
-      since = weekly? ? this_week - (deepest * 7) : cards.values.map { |card| card.statement_period_start(deepest, today:) }.min
+      since = cards.values.map { |card| card.statement_period_start(deepest, today:) }.min
       counted(Transaction.where(account: cards.values, date: since..)).pluck(:account_id, :date, :amount).each do |account_id, date, amount|
-        back = weekly? ? (this_week - date.beginning_of_week(:monday)).to_i / 7 : (0..deepest).find { |n| date >= cards[account_id].statement_period_start(n, today:) }
+        back = (0..deepest).find { |n| date >= cards[account_id].statement_period_start(n, today:) }
         totals[back] += amount if back&.between?(0, deepest)
       end
       totals.transform_values! { |total| [ total, 0 ].max }
@@ -135,8 +134,6 @@ class Budget < ApplicationRecord
 
     # How many periods back the one containing `date` is (0 = this one).
     def periods_back_to(date, today)
-      return [ (today.beginning_of_week(:monday) - date.beginning_of_week(:monday)).to_i / 7, 0 ].max if weekly?
-
       (0..).find { |back| period_dates(today, back).first <= date }
     end
 
@@ -145,11 +142,6 @@ class Budget < ApplicationRecord
     # card's statement and resets at the next one; cards without a statement
     # date follow calendar months.
     def period_dates(today, back)
-      if weekly?
-        week = today.beginning_of_week(:monday) - (back * 7)
-        return [ week, week + 7 ]
-      end
-
       cards = user.accounts.credit_cards.to_a
       return [ today.beginning_of_month << back, today.beginning_of_month << (back - 1) ] if cards.empty?
 

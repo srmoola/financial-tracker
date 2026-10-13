@@ -39,11 +39,11 @@
       </div>
       <p class="mt-1.5 flex justify-between text-xs text-base-content/60">
         <span><%= number_to_percentage(status.percent, precision: 0) %> spent</span>
-        <span>Marker: <%= number_to_percentage(status.elapsed_percent, precision: 0) %> of the <%= budget.weekly? ? "week" : "month" %> passed</span>
+        <span>Marker: <%= number_to_percentage(status.elapsed_percent, precision: 0) %> of the month passed</span>
       </p>
     </div>
 
-    <%= render "history_strip", budget:, history: budget.history(budget.weekly? ? 8 : 6) %>
+    <%= render "history_strip", budget:, history: budget.history(6) %>
 
     <div class="flex flex-wrap items-center justify-between gap-2">
       <ul class="flex min-w-0 flex-wrap gap-1.5" aria-label="Counts">

@@ -30,17 +30,17 @@ RSpec.describe "Budgets", type: :request do
 
       get new_budget_path
       expect(response.body).to include("Food &amp; drink", "Entertainment", "Search merchants", "Blue Bottle")
-      expect(response.body).not_to include("Loan payments")
+      expect(response.body).not_to include("Loan payments", "Weekly", "Monday to Sunday") # monthly only, for now
 
       expect {
-        post budgets_path, params: { budget: { name: "Going out", amount: "200", period: "weekly", categories: [ "", "FOOD_AND_DRINK", "ENTERTAINMENT" ], merchants: [ "", "Blue Bottle" ] } }
+        post budgets_path, params: { budget: { name: "Going out", amount: "200", categories: [ "", "FOOD_AND_DRINK", "ENTERTAINMENT" ], merchants: [ "", "Blue Bottle" ] } }
       }.to change(Budget, :count).by(1).and not_have_enqueued_mail
 
       expect(response).to redirect_to(budgets_path)
-      expect(Budget.last).to have_attributes(name: "Going out", amount: 200, period: "weekly", categories: %w[ FOOD_AND_DRINK ENTERTAINMENT ], merchants: [ "Blue Bottle" ])
+      expect(Budget.last).to have_attributes(name: "Going out", amount: 200, period: "monthly", categories: %w[ FOOD_AND_DRINK ENTERTAINMENT ], merchants: [ "Blue Bottle" ])
 
       follow_redirect!
-      expect(response.body).to include("Going out", "$150.00", "of $200.00", "$50.00 left", "Food &amp; drink", "Entertainment", "Blue Bottle", "Weekly · ", "Resets Mon, ")
+      expect(response.body).to include("Going out", "$150.00", "of $200.00", "$50.00 left", "Food &amp; drink", "Entertainment", "Blue Bottle", "Monthly · ", "Resets ")
     end
 
     it "can roll over what's left, shown on the card" do
@@ -50,7 +50,7 @@ RSpec.describe "Budgets", type: :request do
         get new_budget_path
         expect(response.body).to include("Roll over what's left")
 
-        post budgets_path, params: { budget: { name: "Going out", amount: "200", period: "monthly", rollover: "1", categories: [ "", "FOOD_AND_DRINK" ] } }
+        post budgets_path, params: { budget: { name: "Going out", amount: "200", rollover: "1", categories: [ "", "FOOD_AND_DRINK" ] } }
         budget = Budget.last
         expect(budget).to have_attributes(rollover: true, rollover_started_on: Date.new(2026, 10, 14))
 
@@ -61,7 +61,7 @@ RSpec.describe "Budgets", type: :request do
     end
 
     it "shows what's missing" do
-      post budgets_path, params: { budget: { name: "", amount: "", period: "monthly", categories: [ "" ] } }
+      post budgets_path, params: { budget: { name: "", amount: "", categories: [ "" ] } }
 
       expect(response).to have_http_status(:unprocessable_content)
       expect(response.body).to include("Name can&#39;t be blank", "Pick at least one category or merchant")
@@ -95,7 +95,7 @@ RSpec.describe "Budgets", type: :request do
     end
 
     it "never shows or changes another user's budget" do
-      theirs = users(:two).budgets.create!(name: "Theirs", amount: 100, period: "weekly", categories: %w[ TRAVEL ])
+      theirs = users(:two).budgets.create!(name: "Theirs", amount: 100, categories: %w[ TRAVEL ])
 
       get budgets_path
       expect(response.body).not_to include("Theirs")
