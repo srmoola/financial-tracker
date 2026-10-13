@@ -17,7 +17,9 @@ Rails.application.routes.draw do
   end
 
   # App sections that aren't built yet. Each gets a placeholder page until its real controller exists.
-  resources :transactions, only: %i[ index update ]
+  resources :transactions, only: %i[ index update ] do
+    resource :split, only: %i[ update destroy ], controller: "transaction_splits"
+  end
 
   resources :budgets do
     resources :exclusions, only: %i[ create destroy ], controller: "budget_exclusions"

@@ -33,7 +33,7 @@ class TransactionsController < ApplicationController
     listed = @category ? @spending.filter(in_list_range, @category) : in_list_range
     # The list's category menu: every category in the list's range, plus the
     # current filter if it isn't one of them (e.g. the donut's Other).
-    @category_options = in_list_range.distinct.pluck(Arel.sql(Transaction::EFFECTIVE_CATEGORY_SQL))
+    @category_options = in_list_range.with_parts.distinct.pluck(Arel.sql(Transaction::PART_CATEGORY_SQL))
       .map { |category| [ SpendingBreakdown.label_for(category), SpendingBreakdown.param_for(category) ] }.sort
     if @category && @category_options.none? { |_, param| param == @category }
       @category_options << [ @category == "other" ? "Other categories" : SpendingBreakdown.label_for(@category == "uncategorized" ? nil : @category), @category ]
@@ -41,14 +41,14 @@ class TransactionsController < ApplicationController
 
     # Grouped into the donut's categories, so each category keeps its color.
     @spending_history = SpendingHistory.new(
-      transactions_in(@chart_range).where("amount > 0"), cards: @credit_cards,
+      transactions_in(@chart_range).where("transactions.amount > 0"), cards: @credit_cards,
       category_keys: @spending.categories.map(&:key) - [ :other ], periods_back: STATEMENTS_BACK[@chart_range]
     )
 
     @total_count = listed.count
     @page_count = [ (@total_count / PER_PAGE.to_f).ceil, 1 ].max
     @page = params[:page].to_i.clamp(1, @page_count)
-    @transactions = listed.includes(account: :plaid_item)
+    @transactions = listed.includes(:splits, account: :plaid_item)
       .order(date: :desc, datetime: :desc, created_at: :desc, id: :desc)
       .offset((@page - 1) * PER_PAGE).limit(PER_PAGE)
   end

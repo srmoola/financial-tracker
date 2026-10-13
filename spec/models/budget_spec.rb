@@ -53,6 +53,19 @@ RSpec.describe Budget do
     expect(budget(merchants: [ "Amazon" ]).status.spent).to eq(25)
   end
 
+  it "counts only a split purchase's parts in its categories, but all of it for a picked merchant" do
+    card
+    costco = spend(180, Date.new(2026, 10, 1), category: "GENERAL_MERCHANDISE", merchant: "Costco")
+    costco.split_into([ { category: "FOOD_AND_DRINK", amount: 120 }, { category: "GENERAL_MERCHANDISE", amount: 60 } ])
+
+    food = budget(categories: %w[ FOOD_AND_DRINK ])
+    expect(food.status.spent).to eq(120)
+    expect(food.transactions.map { |transaction| [ transaction.id, transaction.counted_amount ] }).to eq([ [ costco.id, 120 ] ])
+
+    expect(budget(categories: [], merchants: %w[ Costco ]).status.spent).to eq(180)
+    expect(budget(categories: %w[ FOOD_AND_DRINK GENERAL_MERCHANDISE ]).transactions.sole.counted_amount).to eq(180)
+  end
+
   it "uses the user's recategorized categories" do
     card
     spend(40, Date.new(2026, 10, 1), category: "TRAVEL").update!(category_override: "FOOD_AND_DRINK")

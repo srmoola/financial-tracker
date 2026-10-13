@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_14_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_14_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -277,6 +277,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_14_090000) do
     t.index ["key"], name: "index_solid_queue_semaphores_on_key", unique: true
   end
 
+  create_table "transaction_splits", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "transaction_id", null: false
+    t.string "category", null: false
+    t.decimal "amount", precision: 19, scale: 4, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["transaction_id"], name: "index_transaction_splits_on_transaction_id"
+  end
+
   create_table "transactions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "account_id", null: false
     t.string "plaid_transaction_id", null: false
@@ -332,5 +341,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_14_090000) do
   add_foreign_key "solid_queue_ready_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_recurring_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
+  add_foreign_key "transaction_splits", "transactions", on_delete: :cascade
   add_foreign_key "transactions", "accounts"
 end

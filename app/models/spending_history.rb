@@ -18,7 +18,7 @@ class SpendingHistory
     @cards = cards
     @today = today
     @group = ->(category) { category_keys.include?(category) ? category : :other }
-    rows = purchases.pluck(:id, :account_id, :date, Arel.sql(Transaction::EFFECTIVE_CATEGORY_SQL), :amount)
+    rows = purchases.with_parts.pluck(:id, :account_id, :date, Arel.sql(Transaction::PART_CATEGORY_SQL), Arel.sql(Transaction::PART_AMOUNT_SQL))
 
     @daily = periods_back.present? && periods_back < DAILY_UNDER_PERIODS
     @points = with_top_purchases(@daily ? daily_points(rows, periods_back) : period_points(rows, periods_back || periods_since(rows)))
@@ -69,7 +69,7 @@ class SpendingHistory
     # Builds each point from its attributes and purchases, loading just the
     # largest purchases per point, all in one query.
     def with_top_purchases(points_with_rows)
-      top_ids = points_with_rows.map { |_, rows| rows.max_by(TOP_PURCHASES) { |_, _, _, _, amount| amount }.map(&:first) }
+      top_ids = points_with_rows.map { |_, rows| rows.sort_by { |_, _, _, _, amount| -amount }.map(&:first).uniq.first(TOP_PURCHASES) }
       purchases = Transaction.includes(:account).where(id: top_ids.flatten).index_by(&:id)
 
       points_with_rows.zip(top_ids).map do |(attributes, rows), ids|

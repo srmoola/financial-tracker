@@ -6,10 +6,12 @@
   </div>
   <div class="min-w-0 flex-1">
     <p class="truncate font-medium"><%= transaction.display_name %></p>
-    <p class="truncate text-xs text-base-content/60"><%= SpendingBreakdown.label_for(transaction.effective_category) %> · <%= transaction.date.strftime("%b %-d") %></p>
+    <p class="truncate text-xs text-base-content/60">
+      <%= transaction.split? ? "Split from #{number_to_currency(transaction.amount)}" : SpendingBreakdown.label_for(transaction.effective_category) %> · <%= transaction.date.strftime("%b %-d") %>
+    </p>
   </div>
   <p class="flex-none font-semibold tabular-nums">
-    <%= transaction.amount.negative? ? "+#{number_to_currency(transaction.amount.abs)}" : number_to_currency(transaction.amount) %>
+    <%= transaction.counted_amount.negative? ? "+#{number_to_currency(transaction.counted_amount.abs)}" : number_to_currency(transaction.counted_amount) %>
   </p>
   <% if excluded %>
     <%= button_to "Count again", budget_exclusion_path(budget, transaction, back: (back if back.positive?)), method: :delete, class: "btn btn-ghost btn-xs" %>

@@ -41,4 +41,17 @@ RSpec.describe SpendingBreakdown do
     expect(SpendingBreakdown.label_for("ENTERTAINMENT")).to eq("Entertainment")
     expect(SpendingBreakdown.label_for(nil)).to eq("Uncategorized")
   end
+
+  it "counts a split purchase by its parts, and still as one purchase" do
+    costco = spend(180, "GENERAL_MERCHANDISE")
+    costco.split_into([ { category: "FOOD_AND_DRINK", amount: 120 }, { category: "GENERAL_MERCHANDISE", amount: 60 } ])
+    spend(30, "FOOD_AND_DRINK")
+
+    breakdown = SpendingBreakdown.new(Transaction.where(account: card))
+
+    expect(breakdown.categories.map { |category| [ category.key, category.total ] }).to eq([ [ "FOOD_AND_DRINK", 150 ], [ "GENERAL_MERCHANDISE", 60 ] ])
+    expect(breakdown).to have_attributes(total: 210, purchase_count: 2)
+    expect(breakdown.filter(Transaction.where(account: card), "GENERAL_MERCHANDISE")).to eq([ costco ])
+    expect(breakdown.filter(Transaction.where(account: card), "FOOD_AND_DRINK").count).to eq(2)
+  end
 end
