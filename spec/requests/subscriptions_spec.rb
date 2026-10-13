@@ -53,7 +53,7 @@ RSpec.describe "Subscriptions", type: :request do
       expect(response.body).not_to include("Possible subscriptions")
 
       post dismiss_subscriptions_path, params: { subscription: { merchant: "Netflix", amount: "15.49", period: "monthly" } } # replaces the confirmation
-      expect(users(:one).subscription_marks.pluck(:merchant, :kind)).to contain_exactly([ "Gym", "dismissed" ], [ "Netflix", "dismissed" ])
+      expect(users(:one).subscription_marks.reload.pluck(:merchant, :kind)).to contain_exactly([ "Gym", "dismissed" ], [ "Netflix", "dismissed" ])
     end
 
     it "adds a subscription by hand from a recent charge" do
@@ -70,34 +70,40 @@ RSpec.describe "Subscriptions", type: :request do
       expect(response.body).to include("Added iCloud.", "iCloud", "Yearly", "Next Sep 5, 2027", "$99.00", "a year")
     end
 
-    it "keeps a note on each subscription, to tell apart ones from the same merchant" do
+    it "tags subscriptions, to tell apart ones from the same merchant" do
       [ 8, 9, 10 ].each { |month| charge(14.99, Date.new(2026, month, 2), merchant: "Amazon") }
       [ 8, 9, 10 ].each { |month| charge(9.99, Date.new(2026, month, 20), merchant: "Amazon") }
+      prime = { merchant: "Amazon", amount: "14.99", period: "monthly" }
 
-      post note_subscriptions_path, params: { subscription: { merchant: "Amazon", amount: "14.99", period: "monthly" }, note: "  Prime  Video " }
-      expect(response).to redirect_to(subscriptions_path)
-      post note_subscriptions_path, params: { subscription: { merchant: "Amazon", amount: "9.99", period: "monthly" }, note: "Groceries" }
+      post tags_subscriptions_path, params: { subscription: prime, tags: [ "  Prime  Video " ] }
+      expect(response).to redirect_to(subscriptions_path(tagging: Subscription.for(users(:one)).find { |subscription| subscription.amount == 14.99 }.dom_id)) # to add another
+      post tags_subscriptions_path, params: { subscription: { merchant: "Amazon", amount: "9.99", period: "monthly" }, tags: [ "Groceries" ] }
+      post tags_subscriptions_path, params: { subscription: prime, tags: [ "Prime Video", "prime video", "Shared", "" ] } # repeats and blanks are dropped
 
       get subscriptions_path
-      expect(response.body).to include("Amazon <span class=\"font-normal text-base-content/60\">· Prime Video</span>", "· Groceries", 'value="Prime Video"')
-      expect(users(:one).subscription_marks.pluck(:kind, :amount, :note)).to contain_exactly([ "confirmed", 14.99, "Prime Video" ], [ "confirmed", 9.99, "Groceries" ])
+      expect(response.body).to include("Prime Video", "Shared", "Groceries", "Remove tag Prime Video")
+      expect(users(:one).subscription_marks.reload.pluck(:kind, :amount, :tags)).to contain_exactly([ "confirmed", 14.99, [ "Prime Video", "Shared" ] ], [ "confirmed", 9.99, [ "Groceries" ] ])
 
-      post note_subscriptions_path, params: { subscription: { merchant: "Amazon", amount: "9.99", period: "monthly" }, note: " " } # blank removes it
-      expect(users(:one).subscription_marks.pluck(:note)).to contain_exactly("Prime Video", nil)
+      post tags_subscriptions_path, params: { subscription: prime, tags: [ "Shared" ] } # removing one sends the rest
+      expect(response).to redirect_to(subscriptions_path)
+      post tags_subscriptions_path, params: { subscription: { merchant: "Amazon", amount: "9.99", period: "monthly" } } # the last one
+      expect(users(:one).subscription_marks.reload.pluck(:tags)).to contain_exactly([ "Shared" ], [])
 
-      post note_subscriptions_path, params: { subscription: { merchant: "Amazon", amount: "14.99", period: "monthly" }, note: "x" * 41 }
+      post tags_subscriptions_path, params: { subscription: prime, tags: %w[ One Two Three Four ] }
       expect(response).to have_http_status(:unprocessable_content)
-      post note_subscriptions_path, params: { subscription: { merchant: "Hulu", amount: "9.99", period: "monthly" }, note: "Nope" }
+      post tags_subscriptions_path, params: { subscription: prime, tags: [ "x" * 21 ] }
+      expect(response).to have_http_status(:unprocessable_content)
+      post tags_subscriptions_path, params: { subscription: { merchant: "Hulu", amount: "9.99", period: "monthly" }, tags: [ "Nope" ] }
       expect(response).to have_http_status(:not_found)
     end
 
-    it "keeps a note with an added subscription's own mark" do
+    it "keeps tags with an added subscription's own mark" do
       icloud = charge(99, Date.new(2026, 9, 5), merchant: "iCloud")
       post subscriptions_path, params: { transaction_id: icloud.id, period: "yearly" }
 
-      post note_subscriptions_path, params: { subscription: { merchant: "iCloud", amount: "99.0", period: "yearly" }, note: "Family storage" }
+      post tags_subscriptions_path, params: { subscription: { merchant: "iCloud", amount: "99.0", period: "yearly" }, tags: [ "Family" ] }
 
-      expect(users(:one).subscription_marks.pluck(:kind, :note)).to eq([ [ "added", "Family storage" ] ])
+      expect(users(:one).subscription_marks.reload.pluck(:kind, :tags)).to eq([ [ "added", [ "Family" ] ] ])
     end
 
     it "won't add another user's charge" do

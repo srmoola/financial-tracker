@@ -1,5 +1,5 @@
 # The subscriptions found in the user's card purchases (see Subscription),
-# and adding, confirming, dismissing or noting them.
+# and adding, confirming, dismissing or tagging them.
 class SubscriptionsController < ApplicationController
   ADD_FROM_DAYS = 90
 
@@ -37,16 +37,19 @@ class SubscriptionsController < ApplicationController
     redirect_to subscriptions_path, notice: "#{mark.merchant} won't show up as a subscription.", status: :see_other
   end
 
-  # Saves a subscription's note (blank removes it). One without a mark yet gets
-  # a "confirmed" one to hold it: noting it says it's a subscription.
-  def note
+  # Sets a subscription's tags (all of them, so removing one sends the rest).
+  # One without a mark yet gets a "confirmed" one to hold them: tagging it says
+  # it's a subscription. After adding one, the field to add another stays open.
+  def tags
     key = params.expect(subscription: [ :merchant, :amount, :period ])
     subscription = Subscription.for(Current.user).find { |candidate| candidate.key == { merchant: key[:merchant], amount: BigDecimal(key[:amount]), period: key[:period] } } or
       raise ActiveRecord::RecordNotFound
     mark = subscription.mark || Current.user.subscription_marks.new(kind: "confirmed", **subscription.key)
+    tags_before = mark.tags.size
 
-    if mark.update(note: params[:note].to_s)
-      redirect_to subscriptions_path, status: :see_other
+    if mark.update(tags: Array(params[:tags]).map(&:to_s))
+      adding = mark.tags.size > tags_before && mark.tags.size < SubscriptionMark::MAX_TAGS
+      redirect_to subscriptions_path(tagging: (subscription.dom_id if adding)), status: :see_other
     else
       head :unprocessable_content
     end

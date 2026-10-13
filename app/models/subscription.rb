@@ -9,7 +9,7 @@
 #   change, within 25% and on schedule after two charges at the old price.
 # - It has *ended* once its next charge is overdue by the grace period.
 # - The user's SubscriptionMarks confirm, dismiss or add subscriptions by hand,
-#   and hold their notes.
+#   and hold their tags.
 class Subscription
   PERIODS = {
     "monthly" => { label: "Monthly", gaps: 26..35, every: 1.month, grace: 10.days },
@@ -107,7 +107,7 @@ class Subscription
   def monthly_cost = period == "monthly" ? amount : amount / 12
   def yearly_cost = period == "monthly" ? amount * 12 : amount
   def label = PERIODS.fetch(period)[:label]
-  def note = mark&.note
+  def tags = mark&.tags || []
 
   # Found (its second charge came in) during `times`; added-by-hand ones aren't news.
   def found_during?(times) = status != :ended && !@added && charges.size >= 2 && times.cover?(charges[1].arrived_at)
