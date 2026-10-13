@@ -17,8 +17,8 @@ class BudgetsController < ApplicationController
     @back = params[:back].to_i.clamp(0, HISTORY_PERIODS)
     @status = @budget.status(back: @back)
     @history = @budget.history(HISTORY_PERIODS)
-    @transactions = @budget.transactions(back: @back).includes(:account).order(amount: :desc, date: :desc)
-    @excluded = @budget.excluded_transactions(back: @back).includes(:account).order(date: :desc)
+    @transactions = @budget.transactions(back: @back).includes(:splits).order(Arel.sql("counted_amount DESC"), date: :desc).to_a
+    @excluded = @budget.excluded_transactions(back: @back).includes(:splits).order(date: :desc).to_a
   end
 
   def new

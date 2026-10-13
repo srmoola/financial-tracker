@@ -2,11 +2,14 @@ import { Controller } from "@hotwired/stimulus"
 
 // Opens the category picker for one transaction. The picker is a single
 // <dialog> with a form whose buttons each submit a category; this fills in
-// which transaction it's for and marks its current category.
+// which transaction it's for and marks its current category. Purchases can
+// be split across categories instead (handed to transaction_split_controller).
 export default class extends Controller {
-  static targets = ["dialog", "form", "returnTo", "merchant", "amount", "option", "reset", "plaidCategory"]
+  static targets = ["dialog", "form", "returnTo", "merchant", "amount", "option", "reset", "plaidCategory", "split"]
 
-  open({ params: { url, merchant, amount, category, plaidCategory, plaidLabel } }) {
+  open({ params: { url, merchant, amount, category, plaidCategory, plaidLabel, splitUrl, total } }) {
+    this.splitParams = { url: splitUrl, merchant, amount, total, category, parts: [] }
+    this.splitTarget.hidden = !(Number(total) > 0)
     this.formTarget.action = url
     this.returnToTarget.value = window.location.pathname + window.location.search
     this.merchantTarget.textContent = merchant
@@ -25,6 +28,11 @@ export default class extends Controller {
     this.plaidCategoryTarget.textContent = plaidLabel
 
     this.dialogTarget.showModal()
+  }
+
+  split() {
+    this.dialogTarget.close()
+    this.dispatch("split", { detail: this.splitParams })
   }
 
   close() {

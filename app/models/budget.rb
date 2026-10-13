@@ -1,7 +1,7 @@
 # A spending limit for a statement month (each card's statement period; there
 # are no weekly budgets for now), over any mix of categories and merchants: a
 # purchase counts if it's in one of the categories or from one of the
-# merchants. Refunds lower the spending; card payments, transfers and income
+# merchants (a split purchase counts by its parts' categories). Refunds lower the spending; card payments, transfers and income
 # never count. Budgets can overlap. With rollover, what's left of a period's
 # limit is added to the next one's (going over doesn't take any away).
 class Budget < ApplicationRecord
@@ -64,11 +64,13 @@ class Budget < ApplicationRecord
       .map { |status| [ status, status.starts_on < first_date ] }
   end
 
-  # The transactions that count toward the budget this period (or `back` periods ago).
-  def transactions(back: 0, today: Date.current) = counted(in_period(back, today))
+  # The transactions that count toward the budget this period (or `back`
+  # periods ago), each with `counted_amount`: what counts (for a split
+  # purchase, just its parts in the budget's categories).
+  def transactions(back: 0, today: Date.current) = with_counted_amount(counted(in_period(back, today)))
 
   # The ones that would count but were taken out of this budget.
-  def excluded_transactions(back: 0, today: Date.current) = matching(in_period(back, today)).where(id: exclusions.select(:transaction_id))
+  def excluded_transactions(back: 0, today: Date.current) = with_counted_amount(matching(in_period(back, today)).where(id: exclusions.select(:transaction_id)))
 
   # The numbers for this period and the `max_back` before it, this one first,
   # from one query. With rollover, each period after the one it was turned on
@@ -122,7 +124,7 @@ class Budget < ApplicationRecord
       return totals if cards.empty?
 
       since = cards.values.map { |card| card.statement_period_start(deepest, today:) }.min
-      counted(Transaction.where(account: cards.values, date: since..)).pluck(:account_id, :date, :amount).each do |account_id, date, amount|
+      counted(Transaction.where(account: cards.values, date: since..)).pluck(:account_id, :date, Arel.sql(Transaction::PART_AMOUNT_SQL)).each do |account_id, date, amount|
         back = (0..deepest).find { |n| date >= cards[account_id].statement_period_start(n, today:) }
         totals[back] += amount if back&.between?(0, deepest)
       end
@@ -139,13 +141,19 @@ class Budget < ApplicationRecord
     # Narrows `transactions` to the ones this budget counts: matching, and not taken out of it.
     def counted(transactions) = matching(transactions).where.not(id: exclusions.select(:transaction_id))
 
-    # In one of the budget's categories or from one of its merchants, and not a payment or transfer.
+    # The parts (one row each; see Transaction.with_parts) in one of the
+    # budget's categories or from one of its merchants, and not a payment or transfer.
     def matching(transactions)
       matches = []
-      matches << self.class.sanitize_sql_array([ "#{Transaction::EFFECTIVE_CATEGORY_SQL} IN (?)", categories ]) if categories.any?
+      matches << self.class.sanitize_sql_array([ "#{Transaction::PART_CATEGORY_SQL} IN (?)", categories ]) if categories.any?
       matches << self.class.sanitize_sql_array([ "#{Transaction::MERCHANT_SQL} IN (?)", merchants ]) if merchants.any?
-      transactions.where("(#{matches.join(" OR ")})")
-        .where("#{Transaction::EFFECTIVE_CATEGORY_SQL} IS NULL OR #{Transaction::EFFECTIVE_CATEGORY_SQL} NOT IN (?)", NOT_SPENDING)
+      transactions.with_parts.where("(#{matches.join(" OR ")})")
+        .where("#{Transaction::PART_CATEGORY_SQL} IS NULL OR #{Transaction::PART_CATEGORY_SQL} NOT IN (?)", NOT_SPENDING)
+    end
+
+    # One row per transaction, with what counts of it as `counted_amount`.
+    def with_counted_amount(parts)
+      parts.group("transactions.id").select("transactions.*", "SUM(#{Transaction::PART_AMOUNT_SQL}) AS counted_amount")
     end
 
     # How many periods back the one containing `date` is (0 = this one).

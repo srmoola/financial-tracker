@@ -17,7 +17,7 @@
 
   <%# Everything below updates in place (ranges, category, page) without reloading the page. %>
   <%= turbo_frame_tag "transactions_content", class: "block transition-opacity aria-busy:opacity-60",
-        data: { turbo_action: "advance", controller: "frame-scroll recategorize transaction-note", transaction_note_max_length_value: Transaction::NOTE_MAX_LENGTH, action: "turbo:click->frame-scroll#remember turbo:before-frame-render->frame-scroll#keepPosition turbo:frame-render->frame-scroll#restore" } do %>
+        data: { turbo_action: "advance", controller: "frame-scroll recategorize transaction-note transaction-split", transaction_note_max_length_value: Transaction::NOTE_MAX_LENGTH, action: "turbo:click->frame-scroll#remember turbo:before-frame-render->frame-scroll#keepPosition turbo:frame-render->frame-scroll#restore recategorize:split->transaction-split#openFromPicker" } do %>
     <% if @plaid_items_needing_consent.any? %>
       <div class="mt-4 flex flex-col gap-3"><%= render "plaid/statement_dates_prompt", plaid_items: @plaid_items_needing_consent, from: "transactions" %></div>
     <% end %>
@@ -93,6 +93,21 @@
                         <% if transaction.pending %><span class="badge badge-sm badge-soft badge-warning shrink-0">Pending</span><% end %>
                       </p>
                       <div class="flex min-w-0 items-center gap-1 text-xs text-base-content/60">
+                        <% if transaction.split? %>
+                          <% split_labels = transaction.splits.map { |split| SpendingBreakdown.label_for(split.category) } %>
+                          <button type="button"
+                                  class="-ml-1.5 inline-flex min-w-0 cursor-pointer items-center gap-1 rounded-md px-1.5 py-0.5 font-medium text-base-content/80 transition-colors hover:bg-base-200"
+                                  aria-label="Split into <%= transaction.splits.map { |split| "#{SpendingBreakdown.label_for(split.category)} #{number_to_currency(split.amount)}" }.to_sentence %>. Change split"
+                                  data-action="transaction-split#open"
+                                  data-transaction-split-url-param="<%= transaction_split_path(transaction) %>"
+                                  data-transaction-split-merchant-param="<%= transaction.display_name %>"
+                                  data-transaction-split-amount-param="<%= number_to_currency(transaction.amount) %>"
+                                  data-transaction-split-total-param="<%= transaction.amount.to_s("F") %>"
+                                  data-transaction-split-parts-param="<%= transaction.splits.map { |split| { category: split.category, amount: split.amount.to_s("F") } }.to_json %>">
+                            <span class="truncate">Split · <%= split_labels.join(", ") %></span>
+                            <svg class="size-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                          </button>
+                        <% else %>
                         <% category_label = SpendingBreakdown.label_for(transaction.effective_category) %>
                         <button type="button"
                                 class="-ml-1.5 inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-md px-1.5 py-0.5 font-medium text-base-content/80 transition-colors hover:bg-base-200"
@@ -103,11 +118,14 @@
                                 data-recategorize-amount-param="<%= number_to_currency(transaction.amount.abs) %>"
                                 data-recategorize-category-param="<%= transaction.effective_category %>"
                                 data-recategorize-plaid-category-param="<%= transaction.category %>"
-                                data-recategorize-plaid-label-param="<%= SpendingBreakdown.label_for(transaction.category) %>">
+                                data-recategorize-plaid-label-param="<%= SpendingBreakdown.label_for(transaction.category) %>"
+                                data-recategorize-split-url-param="<%= transaction_split_path(transaction) %>"
+                                data-recategorize-total-param="<%= transaction.amount.to_s("F") %>">
                           <%= category_label %>
                           <% if transaction.recategorized? %><span class="size-1.5 rounded-full bg-secondary" aria-hidden="true"></span><% end %>
                           <svg class="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
                         </button>
+                        <% end %>
                         <% if transaction.masked_description? %><span class="truncate max-sm:hidden" title="As it appears on your statement">· <%= transaction.description %></span><% end %>
                         <span class="truncate">· <%= account.name %><%= " •••• #{account.mask}" if account.mask.present? %></span>
                       </div>
@@ -185,6 +203,10 @@
             </div>
             <button type="submit" name="category" value="" class="btn btn-ghost btn-sm mt-3 px-2" data-recategorize-target="reset" hidden>Reset to Plaid's category (<span data-recategorize-target="plaidCategory"></span>)</button>
           <% end %>
+          <button type="button" class="btn btn-sm btn-block mt-3" data-recategorize-target="split" data-action="recategorize#split">
+            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3v6a6 6 0 0 0 6 6h0a6 6 0 0 0 6-6V3M12 15v6"/></svg>
+            Split across categories
+          </button>
 
           <div class="modal-action mt-4">
             <button type="button" class="btn" data-action="recategorize#close">Cancel</button>
@@ -194,6 +216,47 @@
       </dialog>
 
       <%# One shared note editor; each transaction's note button fills it in. %>
+      <dialog class="modal modal-bottom sm:modal-middle" aria-labelledby="split-heading" data-transaction-split-target="dialog">
+        <div class="modal-box">
+          <h3 id="split-heading" class="text-lg font-bold tracking-tight">Split across categories</h3>
+          <p class="mt-1 text-sm text-base-content/60">
+            <span data-transaction-split-target="merchant"></span> · <span class="tabular-nums" data-transaction-split-target="total"></span>
+          </p>
+
+          <%# A POST form with our own _method field (patch to save, delete to remove the split), so there's only one. %>
+          <%= form_with url: transactions_path, method: :post, data: { transaction_split_target: "form", action: "input->transaction-split#update change->transaction-split#update" } do %>
+            <input type="hidden" name="_method" value="patch" data-transaction-split-target="method">
+            <input type="hidden" name="return_to" data-transaction-split-target="returnTo">
+            <div class="mt-5 space-y-2" data-transaction-split-target="parts"></div>
+            <template data-transaction-split-target="template">
+              <div class="flex items-center gap-2" data-part>
+                <select name="parts[][category]" class="select select-sm min-w-0 flex-1" aria-label="Category">
+                  <option value="">Category…</option>
+                  <% Transaction::CATEGORIES.map { |category| [ SpendingBreakdown.label_for(category), category ] }.sort.each do |label, category| %>
+                    <option value="<%= category %>"><%= label %></option>
+                  <% end %>
+                </select>
+                <label class="input input-sm w-28 shrink-0 read-only:bg-base-200">
+                  <span class="text-base-content/60">$</span>
+                  <input type="number" name="parts[][amount]" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00" class="grow tabular-nums read-only:text-base-content/70" aria-label="Amount">
+                </label>
+                <button type="button" class="btn btn-ghost btn-square btn-sm shrink-0" aria-label="Remove this part" data-remove data-action="transaction-split#removePart">
+                  <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+                </button>
+              </div>
+            </template>
+            <button type="button" class="btn btn-ghost btn-sm mt-2 px-2" data-action="transaction-split#addPart">+ Add a part</button>
+            <p class="mt-2 min-h-5 text-sm text-base-content/60" data-transaction-split-target="hint" aria-live="polite"></p>
+
+            <div class="modal-action mt-4">
+              <button type="button" class="btn btn-ghost mr-auto text-error" data-transaction-split-target="unsplit" data-action="transaction-split#unsplit" hidden>Remove split</button>
+              <button type="button" class="btn" data-action="transaction-split#close">Cancel</button>
+              <button type="submit" class="btn btn-primary" data-transaction-split-target="save">Save split</button>
+            </div>
+          <% end %>
+        </div>
+        <form method="dialog" class="modal-backdrop"><button aria-label="Close">close</button></form>
+      </dialog>
       <dialog class="modal modal-bottom sm:modal-middle" aria-labelledby="note-heading" data-transaction-note-target="dialog">
         <div class="modal-box">
           <h3 id="note-heading" class="text-lg font-bold tracking-tight">Note</h3>

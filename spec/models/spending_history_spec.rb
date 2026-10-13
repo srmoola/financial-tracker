@@ -12,7 +12,7 @@ RSpec.describe SpendingHistory do
   end
 
   def history(periods_back, keys = %w[ FOOD_AND_DRINK TRAVEL ])
-    SpendingHistory.new(Transaction.where(account: card).where("amount > 0"), cards: [ card ], category_keys: keys, periods_back:, today:)
+    SpendingHistory.new(Transaction.where(account: card).where("transactions.amount > 0"), cards: [ card ], category_keys: keys, periods_back:, today:)
   end
 
   it "builds a running total for each day of the current statement period" do
