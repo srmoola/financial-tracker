@@ -11,8 +11,9 @@
       <% if sample %><span class="badge badge-soft badge-secondary">Sample data</span><% end %>
     </div>
 
-    <div class="flex flex-col items-center gap-10">
-      <div class="relative size-72 sm:size-96">
+    <%# Stacked on narrow screens; the chart beside its list on wide ones. %>
+    <div class="flex flex-col items-center gap-10 lg:flex-row lg:items-start lg:gap-12">
+      <div class="relative size-72 shrink-0 sm:size-96 lg:size-80 xl:size-96">
         <svg viewBox="0 0 200 200" class="size-full" role="img"
              aria-label="<%= "Net worth #{net_worth_label}. Assets by category: " + groups.zip(segments).map { |group, segment| "#{group.label} #{number_to_currency(group.total)} (#{number_to_percentage(segment.share * 100, precision: 0)})" }.join(", ") %>">
           <g transform="rotate(-90 100 100)">
@@ -41,7 +42,7 @@
         </div>
       </div>
 
-      <div class="flex w-full max-w-2xl flex-col gap-3">
+      <div class="flex w-full max-w-2xl min-w-0 flex-col gap-3 lg:max-w-none lg:flex-1">
         <% groups.zip(segments).each_with_index do |(group, segment), index| %>
           <% share = number_to_percentage(segment.share * 100, precision: 1) %>
           <div class="overflow-hidden rounded-box border border-base-300">
