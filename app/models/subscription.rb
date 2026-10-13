@@ -111,7 +111,8 @@ class Subscription
 
   # Found (its second charge came in) during `times`; added-by-hand ones aren't news.
   def found_during?(times) = status != :ended && !@added && charges.size >= 2 && times.cover?(charges[1].arrived_at)
-  def new?(now: Time.current) = found_during?((now - NEW_FOR)..now)
+  # Found lately, unless the user removed its "New" chip.
+  def new?(now: Time.current) = !mark&.seen? && found_during?((now - NEW_FOR)..now)
 
   # Identifies it for SubscriptionMarks.
   def key = { merchant:, amount:, period: }

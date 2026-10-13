@@ -3,7 +3,7 @@ require "rails_helper"
 RSpec.describe "Tagging subscriptions", type: :system do
   fixtures :users
 
-  it "adds and removes tags right on a subscription, without opening it" do
+  it "adds and removes tags (and the New chip) right on a subscription, without opening it" do
     card = users(:one).plaid_items.create!(item_id: "item-1", access_token: "token", institution_name: "Bank")
       .accounts.create!(plaid_account_id: "card-1", name: "Rewards Card", account_type: "credit", subtype: "credit card")
     [ 2, 1, 0 ].each { |back| card.transactions.create!(plaid_transaction_id: "amazon-#{back}", amount: 14.99, date: Date.current << back, merchant_name: "Amazon", category: "GENERAL_MERCHANDISE") }
@@ -15,7 +15,8 @@ RSpec.describe "Tagging subscriptions", type: :system do
     expect(page).to have_text("Jane Doe") # logged in
     visit subscriptions_path
 
-    expect(page).to have_css(".badge", text: "New")
+    find("button[aria-label='Remove New from Amazon']").click
+    expect(page).to have_no_css(".badge", text: "New")
     expect(page).to have_no_css("input[placeholder='New tag']") # until + is pressed
     expect(page).to have_no_button("+") # until the name and tags are hovered over
     find("p", text: "Amazon").hover

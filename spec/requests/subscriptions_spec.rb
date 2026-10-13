@@ -97,6 +97,20 @@ RSpec.describe "Subscriptions", type: :request do
       expect(response).to have_http_status(:not_found)
     end
 
+    it "removes a subscription's New chip" do
+      [ 8, 9, 10 ].each { |month| charge(6.99, Date.new(2026, month, 10), merchant: "Spotify") } # just synced, so New
+
+      get subscriptions_path
+      expect(response.body).to include("Remove New from Spotify")
+
+      post seen_subscriptions_path, params: { subscription: { merchant: "Spotify", amount: "6.99", period: "monthly" } }
+      expect(response).to redirect_to(subscriptions_path)
+      follow_redirect!
+      expect(response.body).to include("Spotify")
+      expect(response.body).not_to include("Remove New from Spotify")
+      expect(users(:one).subscription_marks.reload.pluck(:kind, :seen)).to eq([ [ "confirmed", true ] ])
+    end
+
     it "keeps tags with an added subscription's own mark" do
       icloud = charge(99, Date.new(2026, 9, 5), merchant: "iCloud")
       post subscriptions_path, params: { transaction_id: icloud.id, period: "yearly" }

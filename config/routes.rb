@@ -33,6 +33,7 @@ Rails.application.routes.draw do
       post :confirm
       post :dismiss
       post :tags
+      post :seen
     end
   end
 

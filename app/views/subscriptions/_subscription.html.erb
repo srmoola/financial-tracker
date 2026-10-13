@@ -9,12 +9,20 @@
           <%# The + to add a tag shows when hovering over the name and tags (always, on touch screens). %>
           <div class="group/tags flex flex-wrap items-center gap-1.5">
             <p class="mr-0.5 truncate font-medium"><%= subscription.merchant %></p>
-            <% if subscription.new? %><span class="badge badge-sm border-secondary/30 bg-secondary/10 text-secondary">New</span><% end %>
+            <% if subscription.new? %>
+              <span class="badge badge-sm gap-0.5 border-error/25 bg-error/10 pr-0.5 text-error">
+                New
+                <%= button_to seen_subscriptions_path, params: { subscription: subscription.key }, form_class: "contents",
+                      class: "grid size-4 cursor-pointer place-items-center rounded-full text-error/70 hover:bg-error/15 hover:text-error", aria: { label: "Remove New from #{subscription.merchant}" } do %>
+                  <svg class="size-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                <% end %>
+              </span>
+            <% end %>
             <% subscription.tags.each do |tag| %>
-              <span class="badge badge-sm gap-0.5 border-accent/70 bg-accent/25 pr-0.5">
+              <span class="badge badge-sm gap-0.5 border-secondary/30 bg-secondary/10 pr-0.5 text-secondary">
                 <%= tag %>
                 <%= button_to tags_subscriptions_path, params: { subscription: subscription.key, tags: subscription.tags - [ tag ] }, form_class: "contents",
-                      class: "grid size-4 cursor-pointer place-items-center rounded-full text-base-content/50 hover:bg-accent/50 hover:text-base-content", aria: { label: "Remove tag #{tag}" } do %>
+                      class: "grid size-4 cursor-pointer place-items-center rounded-full text-secondary/70 hover:bg-secondary/15 hover:text-secondary", aria: { label: "Remove tag #{tag}" } do %>
                   <svg class="size-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
                 <% end %>
               </span>
