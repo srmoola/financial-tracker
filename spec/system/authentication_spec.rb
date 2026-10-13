@@ -3,6 +3,15 @@ require "rails_helper"
 RSpec.describe "Authentication", type: :system do
   fixtures :users
 
+  # Send emails as soon as they're queued, so the sign-up code is there to read.
+  around do |example|
+    queue_adapter = ActiveJob::Base.queue_adapter
+    ActiveJob::Base.queue_adapter = :inline
+    example.run
+  ensure
+    ActiveJob::Base.queue_adapter = queue_adapter
+  end
+
   it "signs up from the landing page, logs out and logs back in" do
     visit root_path
     expect(page).to have_text("See all your money in one place")
@@ -14,6 +23,11 @@ RSpec.describe "Authentication", type: :system do
     fill_in "Password", with: "password123"
     fill_in "Password confirmation", with: "password123"
     click_on "Sign up"
+
+    expect(page).to have_text("Check your email")
+    code = ActionMailer::Base.deliveries.last.subject[/\d{6}/]
+    fill_in "Code", with: code
+    click_on "Confirm email"
 
     expect(page).to have_text("Connect your accounts")
     click_on "Skip for now"
