@@ -1,3 +1,5 @@
+require "image_processing/vips"
+
 # A user's uploaded picture, resized to a square WebP (without the photo's
 # metadata, like where it was taken) and kept in the database, so it survives
 # deploys without file storage.

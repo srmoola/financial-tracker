@@ -1,4 +1,5 @@
 require "rails_helper"
+require "vips"
 
 RSpec.describe "Avatars", type: :request do
   fixtures :users
