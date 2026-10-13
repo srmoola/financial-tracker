@@ -1,0 +1,41 @@
+<% digest = @digest -%>
+Hi <%= @user.first_name %>, here's your week (<%= digest.starts_on.strftime("%b %-d") %> – <%= digest.ends_on.strftime("%b %-d") %>).
+
+NEW SPENDING
+<% if digest.purchase_count.zero? -%>
+No new purchases came in.
+<% else -%>
+<%= number_to_currency(digest.spent) %> across <%= pluralize(digest.purchase_count, "purchase") %>, <%= weekly_change(digest.spent, digest.spent_the_week_before) %>.
+<% digest.top_categories.each do |category| -%>
+  <%= category.label %>: <%= number_to_currency(category.total) %>
+<% end -%>
+
+Biggest:
+<% digest.biggest_purchases.each do |purchase| -%>
+  <%= purchase.display_name %> (<%= purchase.date.strftime("%b %-d") %>): <%= number_to_currency(purchase.amount) %>
+<% end -%>
+<% end -%>
+<% if (budgets = digest.budgets).any? -%>
+
+BUDGETS THIS MONTH
+<% budgets.each do |budget, status| -%>
+  <%= budget.name %>: <%= number_to_currency(status.spent) %> of <%= number_to_currency(status.limit) %> (<%= budget_state(status)[:label] %>)
+<% end -%>
+<% end -%>
+<% if (change, net_worth = digest.net_worth_change) -%>
+
+NET WORTH
+<%= number_to_currency(net_worth) %>, <%= change.negative? ? "down" : "up" %> <%= number_to_currency(change.abs) %> this week.
+<% end -%>
+<% if (failures = digest.sync_failures).any? -%>
+
+NEEDS ATTENTION
+<% failures.each do |plaid_item, error| -%>
+  <%= plaid_item.institution_name.presence || "A connection" %> didn't sync (<%= error %>).
+<% end -%>
+See your accounts: <%= accounts_url %>
+<% end -%>
+
+Open Financial Tracker: <%= root_url %>
+
+You get this every Monday. Turn it off: <%= @unsubscribe_url %>

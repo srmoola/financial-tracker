@@ -5,6 +5,7 @@ class User < ApplicationRecord
   EMAIL_CODE_RESEND_AFTER = 1.minute
 
   has_secure_password
+  generates_token_for :weekly_digest # the unsubscribe link in the Monday email
   has_many :sessions, dependent: :destroy
   has_many :plaid_items, dependent: :destroy
   has_many :accounts, through: :plaid_items

@@ -7,6 +7,14 @@ module BudgetsHelper
 
   def budget_state(status) = STATES.fetch(status.state)
 
+  # How this week's spending compares to last week's, e.g. "up $80.00 from the week before".
+  def weekly_change(spent, before)
+    return "with none the week before" if before.zero?
+    return "the same as the week before" if spent == before
+
+    "#{spent > before ? "up" : "down"} #{number_to_currency((spent - before).abs)} from the week before"
+  end
+
   # e.g. "Resets Mon, Oct 19".
   def budget_resets_on(status) = "Resets #{status.resets_on.strftime("%a, %b %-d")}"
 

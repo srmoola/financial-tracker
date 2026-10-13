@@ -1,0 +1,12 @@
+<% content_for :title, "Weekly email · Financial Tracker" %>
+
+<h1 class="text-3xl font-bold tracking-tight">Weekly email</h1>
+<p class="mt-2 text-base-content/70">
+  A summary every Monday of your new spending, budgets, net worth and anything that failed to sync, sent to
+  <span class="font-semibold text-base-content"><%= @user.email_address %></span>.
+</p>
+
+<p class="mt-6 font-medium">It's <%= @user.weekly_digest? ? "on" : "off" %>.</p>
+<%= button_to @user.weekly_digest? ? "Turn off weekly emails" : "Turn weekly emails back on", weekly_email_path,
+      method: :patch, params: { enabled: @user.weekly_digest? ? "0" : "1", token: params[:token] }.compact,
+      class: class_names("btn btn-block mt-4", @user.weekly_digest? ? "btn-outline" : "btn-primary") %>
