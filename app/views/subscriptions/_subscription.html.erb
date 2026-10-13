@@ -26,31 +26,65 @@
         <svg class="size-4 shrink-0 text-base-content/40 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
       </summary>
 
-      <div class="space-y-6 border-t border-base-300 px-5 py-5 sm:px-6 sm:pl-20">
-        <%= form_with url: note_subscriptions_path, class: "max-w-md" do |form| %>
-          <% subscription.key.each do |name, value| %>
-            <%= hidden_field_tag "subscription[#{name}]", value, id: nil %>
-          <% end %>
-          <%= form.label :note, "Note", for: "#{subscription.dom_id}_note", class: "text-xs font-medium text-base-content/60" %>
-          <div class="mt-1.5 flex gap-2">
-            <%= form.text_field :note, value: subscription.note, id: "#{subscription.dom_id}_note", maxlength: SubscriptionMark::NOTE_MAX_LENGTH,
-                  placeholder: "e.g. Family plan", autocomplete: "off", class: "input input-sm min-w-0 flex-1" %>
-            <%= form.submit "Save", class: "btn btn-sm" %>
-          </div>
-          <p class="mt-1 text-xs text-base-content/60">Helps tell apart subscriptions from the same merchant.</p>
-        <% end %>
+      <div class="space-y-5 border-t border-base-300 bg-base-200/40 px-5 py-5 sm:px-6">
+        <div class="grid gap-5 lg:grid-cols-2 lg:gap-6">
+          <div class="space-y-5">
+            <dl class="grid grid-cols-3 gap-2 sm:gap-3">
+              <div class="rounded-box border border-base-300 bg-base-100 px-3 py-2.5 sm:px-4">
+                <dt class="text-xs text-base-content/60"><%= subscription.status == :ended ? "Last charge" : "Next charge" %></dt>
+                <dd class="mt-0.5 whitespace-nowrap text-sm font-semibold tabular-nums sm:text-base lg:text-sm"><%= (subscription.status == :ended ? subscription.last_on : subscription.next_on).strftime("%b %-d, %Y") %></dd>
+              </div>
+              <div class="rounded-box border border-base-300 bg-base-100 px-3 py-2.5 sm:px-4">
+                <dt class="text-xs text-base-content/60"><%= subscription.period == "monthly" ? "Per year" : "Per month" %></dt>
+                <dd class="mt-0.5 whitespace-nowrap text-sm font-semibold tabular-nums sm:text-base lg:text-sm"><%= number_to_currency(subscription.period == "monthly" ? subscription.yearly_cost : subscription.monthly_cost) %></dd>
+              </div>
+              <div class="rounded-box border border-base-300 bg-base-100 px-3 py-2.5 sm:px-4">
+                <dt class="text-xs text-base-content/60">Total paid</dt>
+                <dd class="mt-0.5 whitespace-nowrap text-sm font-semibold tabular-nums sm:text-base lg:text-sm"><%= number_to_currency(subscription.charges.sum(&:amount)) %></dd>
+              </div>
+            </dl>
 
-        <div class="max-w-md">
-          <p class="text-xs font-medium text-base-content/60">Charges</p>
-          <ul class="mt-1.5 divide-y divide-base-200 text-sm tabular-nums">
-            <% subscription.charges.reverse_each do |charge| %>
-              <li class="flex justify-between py-1.5"><span><%= charge.date.strftime("%b %-d, %Y") %></span><span><%= number_to_currency(charge.amount) %></span></li>
+            <%= form_with url: note_subscriptions_path do |form| %>
+              <% subscription.key.each do |name, value| %>
+                <%= hidden_field_tag "subscription[#{name}]", value, id: nil %>
+              <% end %>
+              <%= form.label :note, "Note", for: "#{subscription.dom_id}_note", class: "text-xs font-medium text-base-content/60" %>
+              <div class="mt-1.5 flex gap-2">
+                <%= form.text_field :note, value: subscription.note, id: "#{subscription.dom_id}_note", maxlength: SubscriptionMark::NOTE_MAX_LENGTH,
+                      placeholder: "e.g. Family plan", autocomplete: "off", class: "input input-sm min-w-0 flex-1 bg-base-100" %>
+                <%= form.submit "Save", class: "btn btn-sm btn-neutral" %>
+              </div>
             <% end %>
-          </ul>
+          </div>
+
+          <div>
+            <p class="text-xs font-medium text-base-content/60">Charges</p>
+            <div class="mt-1.5 overflow-hidden rounded-box border border-base-300 bg-base-100">
+              <table class="table table-sm tabular-nums">
+                <thead>
+                  <tr><th>Date</th><th class="text-right">Amount</th></tr>
+                </thead>
+                <tbody>
+                  <% subscription.charges.each_with_index.reverse_each do |charge, index| %>
+                    <% change = charge.amount - subscription.charges[index - 1].amount if index.positive? %>
+                    <tr>
+                      <td class="whitespace-nowrap"><%= charge.date.strftime("%b %-d, %Y") %></td>
+                      <td class="text-right font-medium">
+                        <% if change&.nonzero? %><span class="mr-2 text-xs font-normal <%= change.positive? ? "text-amber-700" : "text-success" %>"><%= change.positive? ? "+" : "−" %><%= number_to_currency(change.abs) %></span><% end %>
+                        <%= number_to_currency(charge.amount) %>
+                      </td>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
-        <%= button_to "Not a subscription", dismiss_subscriptions_path, params: { subscription: subscription.key },
-              class: "btn btn-ghost btn-sm -ml-3 text-base-content/70", form: { data: { turbo_frame: "_top", turbo_confirm: "Stop showing #{subscription.merchant} as a subscription?" } } %>
+        <div class="flex justify-end">
+          <%= button_to "Not a subscription", dismiss_subscriptions_path, params: { subscription: subscription.key },
+                class: "btn btn-sm btn-outline btn-error", form: { data: { turbo_frame: "_top", turbo_confirm: "Stop showing #{subscription.merchant} as a subscription?" } } %>
+        </div>
       </div>
     </details>
   <% end %>
