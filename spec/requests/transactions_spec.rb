@@ -279,6 +279,40 @@ RSpec.describe "Transactions page", type: :request do
     end
   end
 
+  describe "searching the list" do
+    before do
+      add_transaction(amount: 12, merchant: "Blue Bottle Coffee")
+      add_transaction(amount: 30, merchant: "Whole Foods", category: "GENERAL_MERCHANDISE")
+      card.transactions.create!(plaid_transaction_id: "no-merchant", amount: 9, date: Date.current, description: "LOCAL BAKERY 123", category: "FOOD_AND_DRINK")
+      card.transactions.create!(plaid_transaction_id: "noted", amount: 45, date: Date.current, merchant_name: "Amazon", note: "Birthday gift for mom", category: "GENERAL_MERCHANDISE")
+    end
+
+    it "finds transactions by merchant, statement description or note, in any case" do
+      get transactions_path(q: "coffee")
+      expect(response.body).to include("Blue Bottle Coffee", "Showing 1–1 of 1", 'value="coffee"')
+      expect(body_outside_chart).not_to include("Whole Foods", "LOCAL BAKERY")
+
+      get transactions_path(q: "bakery")
+      expect(response.body).to include("LOCAL BAKERY 123", "Showing 1–1 of 1")
+
+      get transactions_path(q: "BIRTHDAY")
+      expect(response.body).to include("Amazon", "Birthday gift for mom", "Showing 1–1 of 1")
+    end
+
+    it "searches within the category and keeps the search in the page's links" do
+      get transactions_path(q: "o", category: "GENERAL_MERCHANDISE")
+
+      expect(response.body).to include("Whole Foods", "Amazon", "Showing 1–2 of 2")
+      expect(response.body).to include("/transactions?category=GENERAL_MERCHANDISE&amp;chart_range=6m&amp;list_range=1m&amp;q=o&amp;range=statement&amp;spending_view=total") # the list's 1M tab
+    end
+
+    it "says when nothing matches, offering to search all of them" do
+      get transactions_path(q: "zzz")
+
+      expect(response.body).to include("No transactions matching “zzz” this statement period.", "Search all transactions", "list_range=all&amp;q=zzz")
+    end
+  end
+
   it "never shows another user's transactions" do
     add_transaction(amount: 10, merchant: "Mine")
     other_card = users(:two).plaid_items.create!(item_id: "item-2", access_token: "token-2")

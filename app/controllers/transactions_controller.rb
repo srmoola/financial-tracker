@@ -1,7 +1,7 @@
 # Credit card transactions: a spending summary (donut), a spending chart and a
 # paginated list, each with its own time range. The list can be filtered to a
-# category (from its own menu, or a category picked on the donut); the chart
-# always shows every category.
+# category (from its own menu, or a category picked on the donut) and searched;
+# the chart always shows every category.
 class TransactionsController < ApplicationController
   PER_PAGE = 25
   RANGES = { "1w" => "1W", "statement" => "This month", "1m" => "1M", "3m" => "3M", "6m" => "6M", "1y" => "1Y", "all" => "All" }.freeze
@@ -25,6 +25,7 @@ class TransactionsController < ApplicationController
     @chart_range = RANGES.key?(params[:chart_range]) ? params[:chart_range] : DEFAULT_CHART_RANGE
     @spending_view = params[:spending_view] == "categories" ? "categories" : "total"
     @category = params[:category].presence
+    @query = params[:q].to_s.squish.presence
     @credit_cards = Current.user.accounts.credit_cards.includes(:plaid_item).to_a
     @plaid_items_needing_consent = Current.user.plaid_items.where(statement_dates_status: "needs_consent").to_a
     return if @credit_cards.empty?
@@ -36,6 +37,7 @@ class TransactionsController < ApplicationController
 
     in_list_range = transactions_in(@list_range)
     listed = @category ? @spending.filter(in_list_range, @category) : in_list_range
+    listed = search(listed, @query) if @query
     # The list's category menu: every category in the list's range, plus the
     # current filter if it isn't one of them (e.g. the donut's Other).
     @category_options = in_list_range.with_parts.distinct.pluck(Arel.sql(Transaction::PART_CATEGORY_SQL))
@@ -81,7 +83,13 @@ class TransactionsController < ApplicationController
     # A link back to this page, keeping every range, the chart's view and the
     # list's category except for `changes` (e.g. `chart_range: "1y"`).
     def transactions_path_with(**changes)
-      transactions_path({ range: @range, list_range: @list_range, chart_range: @chart_range, spending_view: @spending_view, category: @category }.merge(changes).compact)
+      transactions_path({ range: @range, list_range: @list_range, chart_range: @chart_range, spending_view: @spending_view, category: @category, q: @query }.merge(changes).compact)
+    end
+
+    # Transactions whose merchant, statement description or note contains `query` (any case).
+    def search(transactions, query)
+      pattern = "%#{Transaction.sanitize_sql_like(query)}%"
+      transactions.where("transactions.merchant_name ILIKE :pattern OR transactions.description ILIKE :pattern OR transactions.note ILIKE :pattern", pattern:)
     end
 
     def transactions_in(range)

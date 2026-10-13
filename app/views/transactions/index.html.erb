@@ -61,11 +61,18 @@
                   <%= link_to label, transactions_path_with(list_range: key), class: class_names("tab", "tab-active": key == @list_range), aria: { current: (key == @list_range) || nil } %>
                 <% end %>
               </nav>
-              <%= form_with url: transactions_path, method: :get, data: { controller: "auto-submit" } do |form| %>
+              <%# Typing in the search box updates the list in place; the box itself is kept across
+                  updates (data-turbo-permanent) so it keeps focus and what's typed. Searches replace
+                  the history entry rather than adding one per keystroke. %>
+              <%= form_with url: transactions_path, method: :get, class: "flex min-w-0 flex-1 flex-wrap items-center gap-2",
+                    data: { controller: "auto-submit", turbo_action: "replace" } do |form| %>
                 <%= form.hidden_field :range, value: @range %>
                 <%= form.hidden_field :list_range, value: @list_range %>
                 <%= form.hidden_field :chart_range, value: @chart_range %>
                 <%= form.hidden_field :spending_view, value: @spending_view %>
+                <%= form.search_field :q, value: @query, id: "transactions-search", placeholder: "Search transactions", autocomplete: "off",
+                      class: "input input-sm min-w-40 flex-1 sm:max-w-64", aria: { label: "Search transactions" },
+                      data: { turbo_permanent: true, action: "input->auto-submit#submitSoon" } %>
                 <%= form.select :category, options_for_select(@category_options, @category), { include_blank: "All categories" },
                       class: class_names("select select-sm w-auto", "select-primary": @category), aria: { label: "Filter by category" },
                       data: { action: "auto-submit#submit" } %>
@@ -74,7 +81,16 @@
           </div>
 
           <% if @transactions.empty? %>
-            <p class="border-t border-base-300 px-6 py-10 text-center text-base-content/60 sm:px-8">No <%= category_label ? "#{category_label} " : "" %>transactions <%= range_phrase(@list_range, @credit_cards) %>.</p>
+            <div class="border-t border-base-300 px-6 py-10 text-center text-base-content/60 sm:px-8">
+              <% if @query %>
+                <p>No <%= category_label ? "#{category_label} " : "" %>transactions matching “<%= @query %>” <%= range_phrase(@list_range, @credit_cards) %>.</p>
+                <% unless @list_range == "all" %>
+                  <p class="mt-2"><%= link_to "Search all transactions", transactions_path_with(list_range: "all"), class: "font-medium text-base-content hover:underline" %></p>
+                <% end %>
+              <% else %>
+                <p>No <%= category_label ? "#{category_label} " : "" %>transactions <%= range_phrase(@list_range, @credit_cards) %>.</p>
+              <% end %>
+            </div>
           <% else %>
             <% @transactions.group_by(&:date).each do |date, transactions_on_day| %>
               <h3 class="border-y border-base-300 bg-base-200/60 px-6 py-2 text-xs font-semibold uppercase tracking-wide text-base-content/60 sm:px-8">
