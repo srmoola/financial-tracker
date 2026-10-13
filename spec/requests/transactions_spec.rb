@@ -240,6 +240,29 @@ RSpec.describe "Transactions page", type: :request do
     expect(response.body).to include("Showing 26–30 of 30")
   end
 
+  it "has a 1W range covering the last 7 days, today included, in the donut, chart and list" do
+    travel_to Date.new(2026, 10, 13) do
+      card.update!(last_statement_issue_date: Date.new(2026, 9, 15))
+      add_transaction(amount: 15, merchant: "Within The Week", date: Date.new(2026, 10, 7))
+      add_transaction(amount: 40, merchant: "Eight Days Ago", date: Date.new(2026, 10, 6))
+
+      get transactions_path(range: "1w", list_range: "1w", chart_range: "1w")
+
+      expect(response.body).to include("Last 7 days, since Oct 7", "Within The Week", "$15.00", "Showing 1–1 of 1")
+      expect(response.body).to include("Running total by day since Oct 7")
+      expect(body_outside_chart).not_to include("Eight Days Ago")
+      expect(response.body).to match(%r{<a [^>]*tab-active[^>]*>1W</a>})
+    end
+  end
+
+  it "says when there's nothing in the last 7 days" do
+    add_transaction(amount: 15, merchant: "Long Ago", date: 3.weeks.ago.to_date)
+
+    get transactions_path(range: "1w", list_range: "1w")
+
+    expect(response.body).to include("No credit card purchases in the last 7 days.", "No transactions in the last 7 days.")
+  end
+
   it "gives the list its own time range, separate from the spending summary's" do
     travel_to Date.new(2026, 10, 12) do
       card.update!(last_statement_issue_date: Date.new(2026, 9, 15))

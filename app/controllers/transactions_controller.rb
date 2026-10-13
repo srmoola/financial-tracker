@@ -4,15 +4,20 @@
 # always shows every category.
 class TransactionsController < ApplicationController
   PER_PAGE = 25
-  RANGES = { "statement" => "This month", "1m" => "1M", "3m" => "3M", "6m" => "6M", "1y" => "1Y", "all" => "All" }.freeze
-  # Ranges follow each card's statements: how many full statements before the current period to
-  # include. "all" isn't here: it has no start date.
+  RANGES = { "1w" => "1W", "statement" => "This month", "1m" => "1M", "3m" => "3M", "6m" => "6M", "1y" => "1Y", "all" => "All" }.freeze
+  # "1w" is the last 7 days, today included, for every card.
+  WEEK_DAYS = 7
+  # The other ranges follow each card's statements: how many full statements before the current
+  # period to include. "1w" and "all" aren't here: they don't follow statements.
   STATEMENTS_BACK = { "statement" => 0, "1m" => 1, "3m" => 3, "6m" => 6, "1y" => 12 }.freeze
   DEFAULT_RANGE = "statement" # each card's current statement period
   DEFAULT_CHART_RANGE = "6m"
   DEFAULT_LIST_RANGE = "statement"
 
   helper_method :transactions_path_with
+
+  # The first day of the "1w" range.
+  def self.week_start(today = Date.current) = today - (WEEK_DAYS - 1)
 
   def index
     @range = RANGES.key?(params[:range]) ? params[:range] : DEFAULT_RANGE # the donut's
@@ -42,7 +47,8 @@ class TransactionsController < ApplicationController
     # Grouped into the donut's categories, so each category keeps its color.
     @spending_history = SpendingHistory.new(
       transactions_in(@chart_range).where("transactions.amount > 0"), cards: @credit_cards,
-      category_keys: @spending.categories.map(&:key) - [ :other ], periods_back: STATEMENTS_BACK[@chart_range]
+      category_keys: @spending.categories.map(&:key) - [ :other ], periods_back: STATEMENTS_BACK[@chart_range],
+      since: (self.class.week_start if @chart_range == "1w")
     )
 
     @total_count = listed.count
@@ -81,6 +87,8 @@ class TransactionsController < ApplicationController
     def transactions_in(range)
       if (periods_back = STATEMENTS_BACK[range])
         Transaction.in_statement_periods(@credit_cards, periods_back:)
+      elsif range == "1w"
+        Transaction.where(account: @credit_cards, date: self.class.week_start..)
       else
         Transaction.where(account: @credit_cards)
       end

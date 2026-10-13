@@ -91,6 +91,17 @@ RSpec.describe SpendingHistory do
     expect(points[-1].top_purchases.map(&:amount)).to eq([ 7 ])
   end
 
+  it "goes day by day from a start date when given one, e.g. the last 7 days" do
+    spend(9, Date.new(2026, 10, 8))
+    spend(5, Date.new(2026, 10, 12))
+
+    result = SpendingHistory.new(Transaction.where(account: card), cards: [ card ], category_keys: %w[ FOOD_AND_DRINK ], periods_back: nil, since: Date.new(2026, 10, 6), today:)
+
+    expect(result).to be_daily
+    expect(result.points.map(&:date)).to eq((Date.new(2026, 10, 6)..today).to_a)
+    expect(result.points.last.total).to eq(14)
+  end
+
   it "is empty without purchases" do
     expect(history(0)).to be_empty
   end
