@@ -72,9 +72,4 @@ RSpec.configure do |config|
 
   # travel_to / freeze_time for date-dependent specs.
   config.include ActiveSupport::Testing::TimeHelpers
-
-  # Run system specs in headless Chrome.
-  config.before(:each, type: :system) do
-    driven_by :selenium, using: :headless_chrome, screen_size: [ 1400, 1400 ]
-  end
 end
