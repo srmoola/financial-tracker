@@ -1,4 +1,5 @@
-<%# locals: (status:) %>
+<%# locals: (status:, past: false) %>
+<%# A past month is either under or over budget; pace only matters for this one. %>
 <% state = budget_state(status) %>
 <span class="badge badge-soft <%= state[:badge] %> shrink-0 gap-1">
   <% case status.state %>
@@ -9,5 +10,5 @@
   <% else %>
     <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 7v6M12 17h.01"/></svg>
   <% end %>
-  <%= state[:label] %>
+  <%= past && status.state == :on_track ? "Under budget" : state[:label] %>
 </span>

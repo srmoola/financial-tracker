@@ -65,7 +65,7 @@ RSpec.describe "Budgets", type: :request do
         expect(response.body).to include("of $400.00", "includes $200.00 rolled over")
 
         get budget_path(budget)
-        expect(response.body).to include("On, since Sep 1, 2026", "rolled over from last month", "$200.00")
+        expect(response.body).to include("On, since Sep 1, 2026", "rolled over from the month before", "$200.00")
       end
     end
 
@@ -105,6 +105,76 @@ RSpec.describe "Budgets", type: :request do
       end
     end
 
+    describe "a budget's transactions" do
+      let(:budget) { users(:one).budgets.create!(name: "Going out", amount: 200, categories: %w[ FOOD_AND_DRINK ]) }
+
+      def add(id, amount, date, category: "FOOD_AND_DRINK", merchant: "Blue Bottle")
+        card.transactions.create!(plaid_transaction_id: id, amount:, date:, category:, merchant_name: merchant)
+      end
+
+      around { |example| travel_to(Date.new(2026, 10, 14)) { example.run } }
+      before { card.update!(last_statement_issue_date: Date.new(2026, 9, 15)) }
+
+      it "lists this month's transactions that count, adding up to what's spent" do
+        add("t1", 40, Date.new(2026, 10, 2), merchant: "Chipotle")
+        add("t2", 25, Date.new(2026, 10, 5))
+        add("t3", 99, Date.new(2026, 10, 5), category: "TRAVEL", merchant: "Delta")
+        add("t4", 70, Date.new(2026, 9, 1), merchant: "Last Month")
+
+        get budget_path(budget)
+
+        expect(response.body).to include("2 transactions adding up to $65.00", "Chipotle", "Food &amp; drink · Oct 2", "$40.00", "Blue Bottle", "Don&#39;t count Chipotle in Going out")
+        expect(response.body).not_to include("Delta", "Last Month")
+        expect(response.body.index("Chipotle")).to be < response.body.index("Blue Bottle") # biggest first
+      end
+
+      it "takes a transaction out of the budget, and puts it back" do
+        dinner = add("t1", 120, Date.new(2026, 10, 2), merchant: "Work Dinner")
+        add("t2", 25, Date.new(2026, 10, 5))
+
+        post budget_exclusions_path(budget), params: { transaction_id: dinner.id }
+        expect(response).to redirect_to(budget_path(budget))
+        expect(budget.status.spent).to eq(25)
+
+        follow_redirect!
+        expect(response.body).to include("1 transaction adding up to $25.00", "Not counted (1)", "Work Dinner", "Count again")
+
+        delete budget_exclusion_path(budget, dinner)
+        expect(budget.status.spent).to eq(145)
+        expect(budget.exclusions).to be_empty
+      end
+
+      it "only takes it out of that budget" do
+        dinner = add("t1", 120, Date.new(2026, 10, 2))
+        everything = users(:one).budgets.create!(name: "Everything", amount: 1000, categories: %w[ FOOD_AND_DRINK TRAVEL ])
+
+        post budget_exclusions_path(budget), params: { transaction_id: dinner.id }
+
+        expect(budget.status.spent).to eq(0)
+        expect(everything.status.spent).to eq(120)
+      end
+
+      it "shows a past month and its transactions from the history" do
+        add("t1", 250, Date.new(2026, 9, 10), merchant: "Big Night Out")
+
+        get budget_path(budget)
+        expect(response.body).to include(budget_path(budget, back: 1))
+
+        get budget_path(budget, back: 1)
+        expect(response.body).to include("Aug 16 – Sep 15", "Over budget", "$50.00 over", "Big Night Out", "Back to this month")
+      end
+
+      it "won't take another user's transaction" do
+        theirs = users(:two).plaid_items.create!(item_id: "item-2", access_token: "token-2")
+          .accounts.create!(plaid_account_id: "card-2", name: "Their Card", account_type: "credit", subtype: "credit card")
+          .transactions.create!(plaid_transaction_id: "theirs", amount: 5, date: Date.new(2026, 10, 2), category: "FOOD_AND_DRINK")
+
+        post budget_exclusions_path(budget), params: { transaction_id: theirs.id }
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
     it "never shows or changes another user's budget" do
       theirs = users(:two).budgets.create!(name: "Theirs", amount: 100, categories: %w[ TRAVEL ])
 
@@ -116,6 +186,8 @@ RSpec.describe "Budgets", type: :request do
       get edit_budget_path(theirs)
       expect(response).to have_http_status(:not_found)
       delete budget_path(theirs)
+      expect(response).to have_http_status(:not_found)
+      post budget_exclusions_path(theirs), params: { transaction_id: "anything" }
       expect(response).to have_http_status(:not_found)
     end
 

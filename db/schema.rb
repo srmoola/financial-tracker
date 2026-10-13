@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_13_180000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_14_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -50,6 +50,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_13_180000) do
     t.datetime "created_at", null: false
     t.index ["budget_id", "period_start", "threshold"], name: "idx_on_budget_id_period_start_threshold_cebaca2dc9", unique: true
     t.index ["budget_id"], name: "index_budget_alerts_on_budget_id"
+  end
+
+  create_table "budget_exclusions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "budget_id", null: false
+    t.uuid "transaction_id", null: false
+    t.datetime "created_at", null: false
+    t.index ["budget_id", "transaction_id"], name: "index_budget_exclusions_on_budget_id_and_transaction_id", unique: true
+    t.index ["budget_id"], name: "index_budget_exclusions_on_budget_id"
+    t.index ["transaction_id"], name: "index_budget_exclusions_on_transaction_id"
   end
 
   create_table "budgets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -309,6 +318,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_13_180000) do
   add_foreign_key "account_balance_snapshots", "accounts"
   add_foreign_key "accounts", "plaid_items"
   add_foreign_key "budget_alerts", "budgets"
+  add_foreign_key "budget_exclusions", "budgets", on_delete: :cascade
+  add_foreign_key "budget_exclusions", "transactions", on_delete: :cascade
   add_foreign_key "budgets", "users"
   add_foreign_key "daily_syncs", "plaid_items"
   add_foreign_key "plaid_items", "users"

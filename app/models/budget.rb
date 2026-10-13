@@ -32,6 +32,7 @@ class Budget < ApplicationRecord
 
   belongs_to :user
   has_many :alerts, class_name: "BudgetAlert", dependent: :delete_all
+  has_many :exclusions, class_name: "BudgetExclusion", dependent: :delete_all
 
   normalizes :name, with: ->(name) { name.squish }
   normalizes :categories, with: ->(categories) { categories.compact_blank.uniq }
@@ -62,6 +63,12 @@ class Budget < ApplicationRecord
       .take_while { |status| status.resets_on > first_date }
       .map { |status| [ status, status.starts_on < first_date ] }
   end
+
+  # The transactions that count toward the budget this period (or `back` periods ago).
+  def transactions(back: 0, today: Date.current) = counted(in_period(back, today))
+
+  # The ones that would count but were taken out of this budget.
+  def excluded_transactions(back: 0, today: Date.current) = matching(in_period(back, today)).where(id: exclusions.select(:transaction_id))
 
   # The numbers for this period and the `max_back` before it, this one first,
   # from one query. With rollover, each period after the one it was turned on
@@ -122,9 +129,18 @@ class Budget < ApplicationRecord
       totals.transform_values! { |total| [ total, 0 ].max }
     end
 
-    # Narrows `transactions` to the ones this budget counts: in one of its
-    # categories or from one of its merchants, and not a payment or transfer.
-    def counted(transactions)
+    # Each card's transactions in its own statement month `back` periods ago.
+    def in_period(back, today)
+      user.accounts.credit_cards
+        .map { |card| Transaction.where(account: card, date: card.statement_period_start(back, today:)...card.statement_period_start(back - 1, today:)) }
+        .reduce(:or) || Transaction.none
+    end
+
+    # Narrows `transactions` to the ones this budget counts: matching, and not taken out of it.
+    def counted(transactions) = matching(transactions).where.not(id: exclusions.select(:transaction_id))
+
+    # In one of the budget's categories or from one of its merchants, and not a payment or transfer.
+    def matching(transactions)
       matches = []
       matches << self.class.sanitize_sql_array([ "#{Transaction::EFFECTIVE_CATEGORY_SQL} IN (?)", categories ]) if categories.any?
       matches << self.class.sanitize_sql_array([ "#{Transaction::MERCHANT_SQL} IN (?)", merchants ]) if merchants.any?

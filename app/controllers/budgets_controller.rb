@@ -11,9 +11,14 @@ class BudgetsController < ApplicationController
     @budgets = Current.user.budgets.order(:created_at).map { |budget| [ budget, budget.status ] }
   end
 
+  # One month of the budget (`back` months ago; this one by default), with its
+  # transactions, and the list of past months.
   def show
-    @status = @budget.status
+    @back = params[:back].to_i.clamp(0, HISTORY_PERIODS)
+    @status = @budget.status(back: @back)
     @history = @budget.history(HISTORY_PERIODS)
+    @transactions = @budget.transactions(back: @back).includes(:account).order(amount: :desc, date: :desc)
+    @excluded = @budget.excluded_transactions(back: @back).includes(:account).order(date: :desc)
   end
 
   def new
