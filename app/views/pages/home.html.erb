@@ -1,4 +1,5 @@
 <% content_for :title, "Overview · Financial Tracker" %>
+<% content_for :main_top_padding, "pt-4 lg:pt-8" %>
 
 <% if @sample %>
   <section class="card border border-base-300 bg-pastel" aria-labelledby="link-accounts-heading">
@@ -37,10 +38,7 @@
   <%= has_history ? history : breakdown %>
 </div>
 
-<div class="mt-8">
-  <%= has_history ? breakdown : history %>
-</div>
-
+<%# The other sections, right below whichever leads. %>
 <div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
   <% SampleData::HIGHLIGHTS.each do |highlight| %>
     <% item = nav_item(highlight.section) %>
@@ -79,4 +77,8 @@
       </div>
     <% end %>
   <% end %>
+</div>
+
+<div class="mt-8">
+  <%= has_history ? breakdown : history %>
 </div>

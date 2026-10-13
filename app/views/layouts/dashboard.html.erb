@@ -45,7 +45,8 @@
         </dialog>
       </header>
 
-      <main class="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-8 lg:py-12">
+      <%# A page can set :main_top_padding for less (or more) space at the top. %>
+      <main class="mx-auto w-full max-w-6xl flex-1 px-4 pb-8 sm:px-8 lg:pb-12 <%= yield(:main_top_padding).presence || "pt-8 lg:pt-12" %>">
         <%= render "shared/flash" %>
         <%= yield %>
       </main>
