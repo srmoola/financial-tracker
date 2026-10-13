@@ -1,0 +1,63 @@
+<% content_for :title, "Subscriptions · Financial Tracker" %>
+
+<div class="flex flex-wrap items-center justify-between gap-3">
+  <h1 class="text-3xl font-bold tracking-tight">Subscriptions</h1>
+  <%= link_to "Add a subscription", new_subscription_path, class: "btn btn-outline" %>
+</div>
+<p class="mt-1 text-base-content/70">Monthly and yearly charges found on your credit cards.</p>
+
+<% if @active.any? %>
+  <section class="card mt-8 border border-base-300 bg-base-100" aria-label="Total">
+    <div class="card-body flex-row flex-wrap items-baseline gap-x-6 gap-y-1 p-6">
+      <p class="flex-none"><span class="text-3xl font-bold tracking-tight tabular-nums"><%= number_to_currency(@active.sum(&:monthly_cost)) %></span> <span class="text-base-content/60">a month</span></p>
+      <p class="flex-none text-base-content/60"><span class="font-semibold tabular-nums text-base-content"><%= number_to_currency(@active.sum(&:yearly_cost)) %></span> a year · <%= pluralize(@active.size, "subscription") %></p>
+    </div>
+  </section>
+
+  <ul class="card mt-4 divide-y divide-base-300 overflow-hidden border border-base-300 bg-base-100" aria-label="Your subscriptions">
+    <% @active.each do |subscription| %>
+      <%= render "subscription", subscription: %>
+    <% end %>
+  </ul>
+<% else %>
+  <div class="card mt-8 border border-dashed border-base-300 bg-base-100">
+    <div class="card-body items-center p-10 text-center">
+      <p class="font-semibold">No subscriptions found yet</p>
+      <p class="max-w-md text-sm text-base-content/60">A subscription shows up once the same amount is charged two months in a row. You can also add one yourself.</p>
+    </div>
+  </div>
+<% end %>
+
+<% if @possible.any? %>
+  <section class="mt-10" aria-labelledby="possible-heading">
+    <h2 id="possible-heading" class="text-lg font-bold tracking-tight">Possible subscriptions</h2>
+    <p class="text-sm text-base-content/60">Charged the same amount twice, a month (or a year) apart.</p>
+    <ul class="card mt-3 divide-y divide-base-300 border border-base-300 bg-base-100">
+      <% @possible.each do |subscription| %>
+        <li class="flex flex-wrap items-center gap-x-4 gap-y-2 px-6 py-4">
+          <div class="grid size-10 shrink-0 place-items-center rounded-xl bg-base-200 text-sm font-semibold" aria-hidden="true"><%= subscription.merchant.first.upcase %></div>
+          <div class="min-w-0 flex-1">
+            <p class="truncate font-medium"><%= subscription.merchant %> <span class="font-normal text-base-content/60">· <%= number_to_currency(subscription.amount) %> <%= subscription.label.downcase %></span></p>
+            <p class="text-xs text-base-content/60">Charged <%= subscription.charges.map { |charge| charge.date.strftime("%b %-d") }.to_sentence %></p>
+          </div>
+          <div class="flex gap-2">
+            <%= button_to "Yes", confirm_subscriptions_path, params: { subscription: subscription.key }, class: "btn btn-sm btn-primary", aria: { label: "Yes, #{subscription.merchant} is a subscription" } %>
+            <%= button_to "Not a subscription", dismiss_subscriptions_path, params: { subscription: subscription.key }, class: "btn btn-sm btn-ghost" %>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+  </section>
+<% end %>
+
+<% if @ended.any? %>
+  <details class="mt-10">
+    <summary class="cursor-pointer text-sm font-medium text-base-content/70 hover:text-base-content">Ended (<%= @ended.size %>)</summary>
+    <p class="mt-1 text-sm text-base-content/60">No charge since one was due.</p>
+    <ul class="card mt-3 divide-y divide-base-300 overflow-hidden border border-base-300 bg-base-100 opacity-80">
+      <% @ended.each do |subscription| %>
+        <%= render "subscription", subscription: %>
+      <% end %>
+    </ul>
+  </details>
+<% end %>

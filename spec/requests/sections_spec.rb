@@ -3,7 +3,7 @@ require "rails_helper"
 RSpec.describe "App sections", type: :request do
   fixtures :users
 
-  %w[ subscriptions taxes ].each do |section|
+  %w[ taxes ].each do |section|
     it "shows a placeholder for #{section} when logged in" do
       sign_in_as users(:one)
 

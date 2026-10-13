@@ -62,4 +62,10 @@ RSpec.describe Transaction, type: :model do
       expect(costco.reload.splits).to be_empty
     end
   end
+
+  it "names who a transaction is with for grouping charges" do
+    expect(Transaction.merchant_key("Spotify", "SPOTIFY P1234")).to eq("Spotify")
+    expect(Transaction.merchant_key(nil, "NETFLIX.COM 866-579-7172")).to eq("NETFLIX.COM")
+    expect(Transaction.merchant_key("", "*********-********")).to be_nil
+  end
 end

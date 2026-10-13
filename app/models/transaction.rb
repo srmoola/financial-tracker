@@ -38,6 +38,13 @@ class Transaction < ApplicationRecord
     cards.map { |card| where(account: card, date: card.statement_period_start(periods_back)..) }.reduce(:or) || none
   end
 
+  # Who a transaction is with, for grouping charges: Plaid's merchant name, else
+  # the statement description without numbers and symbols (order numbers,
+  # masked digits). Nil when nothing's left.
+  def self.merchant_key(merchant_name, description)
+    merchant_name.presence || description.to_s.gsub(/[^[:alpha:]&' .]+/, " ").squish.presence
+  end
+
   def effective_category = category_override || category
   def split? = splits.any?
 

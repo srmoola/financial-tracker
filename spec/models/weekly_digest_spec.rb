@@ -56,4 +56,12 @@ RSpec.describe WeeklyDigest do
     expect(digest.net_worth_change).to be_nil
     expect(WeeklyDigest.new(users(:two))).not_to be_worth_sending
   end
+
+  it "has the subscriptions found last week" do
+    arrived(15.49, on: Date.new(2026, 9, 1), merchant: "Netflix", category: "ENTERTAINMENT")
+    arrived(15.49, on: Date.new(2026, 10, 1), bought: Date.new(2026, 10, 1), merchant: "Netflix", category: "ENTERTAINMENT").update!(created_at: Time.utc(2026, 10, 13, 6))
+    [ 7, 8, 9 ].each { |month| arrived(6.99, on: Date.new(2026, month, 10), merchant: "Spotify", category: "ENTERTAINMENT") } # found long ago
+
+    expect(digest.new_subscriptions.map { |subscription| [ subscription.merchant, subscription.status ] }).to eq([ [ "Netflix", :possible ] ])
+  end
 end

@@ -55,6 +55,13 @@
           <% if @sample %>
             <p class="mt-2 text-2xl font-bold tracking-tight"><%= highlight.stat %></p>
             <p class="text-sm text-base-content/60"><%= highlight.detail %></p>
+          <% elsif highlight.section == :subscriptions %>
+            <% if @subscriptions.any? %>
+              <p class="mt-2 text-2xl font-bold tracking-tight"><%= number_to_currency(@subscriptions.sum(&:monthly_cost)) %>/mo</p>
+              <p class="text-sm text-base-content/60">across <%= pluralize(@subscriptions.size, "subscription") %></p>
+            <% else %>
+              <p class="mt-2 text-sm text-base-content/60">None found yet</p>
+            <% end %>
           <% elsif highlight.section == :budgets %>
             <% if @budget_statuses.any? %>
               <p class="mt-2 text-2xl font-bold tracking-tight"><%= @budget_statuses.count { |status| status.state == :on_track } %> of <%= @budget_statuses.size %></p>
