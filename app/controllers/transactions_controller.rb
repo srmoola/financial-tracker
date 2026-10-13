@@ -46,12 +46,17 @@ class TransactionsController < ApplicationController
       @category_options << [ @category == "other" ? "Other categories" : SpendingBreakdown.label_for(@category == "uncategorized" ? nil : @category), @category ]
     end
 
-    # Grouped into the donut's categories, so each category keeps its color.
-    @spending_history = SpendingHistory.new(
-      transactions_in(@chart_range).where("transactions.amount > 0"), cards: @credit_cards,
-      category_keys: @spending.categories.map(&:key) - [ :other ], periods_back: STATEMENTS_BACK[@chart_range],
-      since: (self.class.week_start if @chart_range == "1w")
-    )
+    # Just the list is updating (a search, its range or category, or a page), so
+    # the donut and chart aren't shown and the chart isn't worked out.
+    @list_only = turbo_frame_request_id == "transactions_list"
+    unless @list_only
+      # Grouped into the donut's categories, so each category keeps its color.
+      @spending_history = SpendingHistory.new(
+        transactions_in(@chart_range).where("transactions.amount > 0"), cards: @credit_cards,
+        category_keys: @spending.categories.map(&:key) - [ :other ], periods_back: STATEMENTS_BACK[@chart_range],
+        since: (self.class.week_start if @chart_range == "1w")
+      )
+    end
 
     @total_count = listed.count
     @page_count = [ (@total_count / PER_PAGE.to_f).ceil, 1 ].max

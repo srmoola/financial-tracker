@@ -311,6 +311,16 @@ RSpec.describe "Transactions page", type: :request do
 
       expect(response.body).to include("No transactions matching “zzz” this statement period.", "Search all transactions", "list_range=all&amp;q=zzz")
     end
+
+    it "updates just the list when only the list is asked for, leaving out the donut and chart" do
+      get transactions_path(q: "coffee"), headers: { "Turbo-Frame" => "transactions_list" }
+
+      expect(response.body).to include('id="transactions_list"', "Blue Bottle Coffee", "Showing 1–1 of 1")
+      expect(response.body).not_to include('id="spending-heading"', 'id="spending-over-time-heading"')
+
+      get transactions_path(q: "coffee")
+      expect(response.body).to include('id="transactions_list"', 'id="spending-heading"', 'id="spending-over-time-heading"')
+    end
   end
 
   it "never shows another user's transactions" do
