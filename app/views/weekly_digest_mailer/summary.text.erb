@@ -15,6 +15,14 @@ Biggest:
   <%= purchase.display_name %> (<%= purchase.date.strftime("%b %-d") %>): <%= number_to_currency(purchase.amount) %>
 <% end -%>
 <% end -%>
+<% if (subscriptions = digest.new_subscriptions).any? -%>
+
+NEW SUBSCRIPTIONS
+<% subscriptions.each do |subscription| -%>
+  <%= subscription.merchant %>: <%= number_to_currency(subscription.amount) %> <%= subscription.label.downcase %><%= " (possible)" if subscription.status == :possible %>
+<% end -%>
+See them: <%= subscriptions_url %>
+<% end -%>
 <% if (budgets = digest.budgets).any? -%>
 
 BUDGETS THIS MONTH

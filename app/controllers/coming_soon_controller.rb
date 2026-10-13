@@ -1,6 +1,5 @@
 class ComingSoonController < ApplicationController
   DESCRIPTIONS = {
-    "subscriptions" => "See every recurring charge in one place, and spot the ones you forgot about.",
     "taxes" => "An estimate of what you'll owe this year, based on your income and investments."
   }.freeze
 

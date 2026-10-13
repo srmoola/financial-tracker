@@ -1,0 +1,35 @@
+<% content_for :title, "Add a subscription · Financial Tracker" %>
+
+<%= link_to subscriptions_path, class: "inline-flex items-center gap-1 text-sm font-medium text-base-content/70 hover:text-base-content" do %>
+  <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
+  Subscriptions
+<% end %>
+<h1 class="mt-2 text-3xl font-bold tracking-tight">Add a subscription</h1>
+<p class="mt-1 text-base-content/70">Pick a charge from the last 3 months and how often it renews.</p>
+
+<div class="mt-8 max-w-2xl" data-controller="list-filter">
+  <% if @charges.empty? %>
+    <p class="text-sm text-base-content/60">No charges in the last 3 months.</p>
+  <% else %>
+    <input type="search" class="input w-full" placeholder="Search charges" aria-label="Search charges"
+           data-list-filter-target="input" data-action="input->list-filter#filter">
+    <ul class="card mt-3 divide-y divide-base-300 border border-base-300 bg-base-100">
+      <% @charges.each do |charge| %>
+        <% merchant = Transaction.merchant_key(charge.merchant_name, charge.description) %>
+        <li class="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3" data-list-filter-target="item" data-filter-text="<%= merchant.downcase %>">
+          <div class="min-w-0 flex-1">
+            <p class="truncate font-medium"><%= merchant %></p>
+            <p class="text-xs text-base-content/60"><%= charge.date.strftime("%b %-d") %> · <%= number_to_currency(charge.amount) %></p>
+          </div>
+          <div class="flex gap-2">
+            <% Subscription::PERIODS.each do |period, rules| %>
+              <%= button_to rules[:label], subscriptions_path, params: { transaction_id: charge.id, period: }, class: "btn btn-sm",
+                    aria: { label: "Add #{merchant}, #{number_to_currency(charge.amount)} #{rules[:label].downcase}" } %>
+            <% end %>
+          </div>
+        </li>
+      <% end %>
+      <li class="px-5 py-3 text-sm text-base-content/60" data-list-filter-target="empty" hidden>No charges match.</li>
+    </ul>
+  <% end %>
+</div>

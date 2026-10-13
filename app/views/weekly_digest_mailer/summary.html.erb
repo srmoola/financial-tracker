@@ -20,6 +20,14 @@
     </table>
   <% end %>
 
+  <% if (subscriptions = digest.new_subscriptions).any? %>
+    <p style="<%= section %>">New subscriptions</p>
+    <% subscriptions.each do |subscription| %>
+      <p style="margin: 0 0 4px;"><%= subscription.merchant %> <span style="<%= muted %>"><%= number_to_currency(subscription.amount) %> <%= subscription.label.downcase %><%= " · possible" if subscription.status == :possible %></span></p>
+    <% end %>
+    <p style="margin: 4px 0 0;"><%= link_to "See your subscriptions", subscriptions_url %></p>
+  <% end %>
+
   <% if (budgets = digest.budgets).any? %>
     <p style="<%= section %>">Budgets this month</p>
     <table style="width: 100%; border-collapse: collapse;">

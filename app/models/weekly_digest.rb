@@ -35,6 +35,9 @@ class WeeklyDigest
   def top_categories = SpendingBreakdown.new(new_purchases).categories.first(TOP_CATEGORIES)
   def biggest_purchases = new_purchases.order(amount: :desc).limit(BIGGEST_PURCHASES).to_a
 
+  # Subscriptions found last week (their second charge came in).
+  def new_subscriptions = Subscription.for(user, today: ends_on + 1).select { |subscription| subscription.found_during?(starts_on.beginning_of_day...(ends_on + 1).beginning_of_day) }
+
   def budgets = user.budgets.order(:created_at).map { |budget| [ budget, budget.status ] }
 
   # How net worth moved from the end of the week before to the end of last

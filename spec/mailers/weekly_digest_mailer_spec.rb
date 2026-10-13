@@ -23,4 +23,15 @@ RSpec.describe WeeklyDigestMailer do
     expect(User.find_by_token_for(:weekly_digest, CGI.unescape(token))).to eq(users(:one))
     expect(text).to include("Turn it off: http://")
   end
+
+  it "lists subscriptions found last week" do
+    card = users(:one).plaid_items.create!(item_id: "item-1", access_token: "token")
+      .accounts.create!(plaid_account_id: "card-1", name: "Card", account_type: "credit", subtype: "credit card")
+    card.transactions.create!(plaid_transaction_id: "n1", amount: 15.49, date: Date.new(2026, 9, 13), merchant_name: "Netflix", category: "ENTERTAINMENT", created_at: Time.utc(2026, 9, 14))
+    card.transactions.create!(plaid_transaction_id: "n2", amount: 15.49, date: Date.new(2026, 10, 13), merchant_name: "Netflix", category: "ENTERTAINMENT", created_at: Time.utc(2026, 10, 14))
+
+    text = WeeklyDigestMailer.summary(users(:one)).text_part.body.to_s
+
+    expect(text).to include("NEW SUBSCRIPTIONS", "Netflix: $15.49 monthly (possible)", "/subscriptions")
+  end
 end

@@ -1,0 +1,40 @@
+<%# locals: (subscription:) %>
+<%# A subscription row; opens to show its past charges and "Not a subscription". %>
+<li>
+  <details class="group">
+    <summary class="flex cursor-pointer list-none items-center gap-4 px-6 py-4 transition-colors hover:bg-base-200/50 [&::-webkit-details-marker]:hidden">
+      <div class="grid size-10 shrink-0 place-items-center rounded-xl bg-base-200 text-sm font-semibold" aria-hidden="true"><%= subscription.merchant.first.upcase %></div>
+      <div class="min-w-0 flex-1">
+        <p class="flex items-center gap-2 font-medium">
+          <span class="truncate"><%= subscription.merchant %></span>
+          <% if subscription.new? %><span class="badge badge-soft badge-secondary badge-sm shrink-0">New</span><% end %>
+        </p>
+        <p class="truncate text-xs text-base-content/60">
+          <%= subscription.label %><%= " · #{subscription.account.name} •••• #{subscription.account.mask}" if subscription.account&.mask.present? %>
+          <% if subscription.previous_amount && subscription.amount > subscription.previous_amount %>
+            · <span class="font-medium text-amber-700">Price went up from <%= number_to_currency(subscription.previous_amount) %></span>
+          <% end %>
+        </p>
+      </div>
+      <div class="flex-none text-right">
+        <p class="font-semibold tabular-nums"><%= number_to_currency(subscription.amount) %><span class="text-xs font-normal text-base-content/60">/<%= subscription.period == "monthly" ? "mo" : "yr" %></span></p>
+        <p class="text-xs text-base-content/60">
+          <%= subscription.status == :ended ? "Last #{subscription.last_on.strftime("%b %-d")}" : "Next #{subscription.next_on.strftime("%b %-d")}" %>
+        </p>
+      </div>
+      <svg class="size-4 shrink-0 text-base-content/40 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+    </summary>
+    <div class="flex flex-wrap items-end justify-between gap-3 border-t border-base-300 bg-base-200/30 px-6 py-3 sm:pl-20">
+      <div>
+        <p class="text-xs font-medium text-base-content/60">Charges</p>
+        <ul class="mt-1 space-y-0.5 text-sm tabular-nums">
+          <% subscription.charges.reverse_each do |charge| %>
+            <li><%= charge.date.strftime("%b %-d, %Y") %> · <%= number_to_currency(charge.amount) %></li>
+          <% end %>
+        </ul>
+      </div>
+      <%= button_to "Not a subscription", dismiss_subscriptions_path, params: { subscription: subscription.key },
+            class: "btn btn-ghost btn-sm text-base-content/70", form: { data: { turbo_confirm: "Stop showing #{subscription.merchant} as a subscription?" } } %>
+    </div>
+  </details>
+</li>

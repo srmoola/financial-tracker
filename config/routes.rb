@@ -28,7 +28,14 @@ Rails.application.routes.draw do
     resources :exclusions, only: %i[ create destroy ], controller: "budget_exclusions"
   end
 
-  %w[ subscriptions taxes ].each do |section|
+  resources :subscriptions, only: %i[ index new create ] do
+    collection do
+      post :confirm
+      post :dismiss
+    end
+  end
+
+  %w[ taxes ].each do |section|
     get section, to: "coming_soon#show", defaults: { section: section }, as: section
   end
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
