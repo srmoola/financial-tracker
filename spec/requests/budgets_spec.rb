@@ -36,11 +36,17 @@ RSpec.describe "Budgets", type: :request do
         post budgets_path, params: { budget: { name: "Going out", amount: "200", categories: [ "", "FOOD_AND_DRINK", "ENTERTAINMENT" ], merchants: [ "", "Blue Bottle" ] } }
       }.to change(Budget, :count).by(1).and not_have_enqueued_mail
 
-      expect(response).to redirect_to(budgets_path)
-      expect(Budget.last).to have_attributes(name: "Going out", amount: 200, period: "monthly", categories: %w[ FOOD_AND_DRINK ENTERTAINMENT ], merchants: [ "Blue Bottle" ])
+      budget = Budget.last
+      expect(response).to redirect_to(budget_path(budget))
+      expect(budget).to have_attributes(name: "Going out", amount: 200, period: "monthly", categories: %w[ FOOD_AND_DRINK ENTERTAINMENT ], merchants: [ "Blue Bottle" ])
 
-      follow_redirect!
-      expect(response.body).to include("Going out", "$150.00", "of $200.00", "$50.00 left", "Food &amp; drink", "Entertainment", "Blue Bottle", "Monthly · ", "Resets ")
+      follow_redirect! # the budget's own page
+      expect(response.body).to include("Going out", "This month", "$150.00", "of $200.00", "$50.00 left", "Resets ")
+      expect(response.body).to include("Monthly limit", "Your card's statement month", "Food &amp; drink", "Entertainment", "Blue Bottle", "Emails at 50%, 90% and 100%", edit_budget_path(budget))
+
+      get budgets_path # a simple card that links to it
+      expect(response.body).to include(budget_path(budget), "Going out", "of $200.00", "$50.00 left")
+      expect(response.body).not_to include("History", "Blue Bottle")
     end
 
     it "can roll over what's left, shown on the card" do
@@ -56,7 +62,10 @@ RSpec.describe "Budgets", type: :request do
 
         budget.update_column(:rollover_started_on, Date.new(2026, 9, 1)) # as if turned on last statement month
         get budgets_path
-        expect(response.body).to include("Monthly · Rolls over", "of $400.00", "Includes $200.00 rolled over")
+        expect(response.body).to include("of $400.00", "includes $200.00 rolled over")
+
+        get budget_path(budget)
+        expect(response.body).to include("On, since Sep 1, 2026", "rolled over from last month", "$200.00")
       end
     end
 
@@ -70,24 +79,26 @@ RSpec.describe "Budgets", type: :request do
     it "edits and deletes a budget" do
       budget = users(:one).budgets.create!(name: "Going out", amount: 200, period: "monthly", categories: %w[ FOOD_AND_DRINK ])
 
+      get edit_budget_path(budget)
+      expect(response.body).to include("Delete budget", budget_path(budget)) # Cancel goes back to the budget
+
       patch budget_path(budget), params: { budget: { amount: "300", categories: [ "", "TRAVEL" ] } }
+      expect(response).to redirect_to(budget_path(budget))
       expect(budget.reload).to have_attributes(amount: 300, categories: %w[ TRAVEL ])
 
       expect { delete budget_path(budget) }.to change(Budget, :count).by(-1)
       expect(response).to redirect_to(budgets_path)
     end
 
-    it "shows how past periods went, on the card and on the budget's own page" do
+    it "lists how past months went on the budget's own page" do
       travel_to Date.new(2026, 10, 14) do
         card.update!(last_statement_issue_date: Date.new(2026, 9, 15))
         card.transactions.create!(plaid_transaction_id: "t1", amount: 250, date: Date.new(2026, 9, 10), category: "FOOD_AND_DRINK")
         card.transactions.create!(plaid_transaction_id: "t2", amount: 120, date: Date.new(2026, 7, 20), category: "FOOD_AND_DRINK")
         budget = users(:one).budgets.create!(name: "Going out", amount: 200, period: "monthly", categories: %w[ FOOD_AND_DRINK ])
 
-        get budgets_path
-        expect(response.body).to include("History", "Under budget in 0 of the last 1 month", budget_path(budget))
-
         get budget_path(budget)
+        expect(response.body).to include("History")
         expect(response.body).to include("Aug 16 – Sep 15", "$250.00 of $200.00", "Over by $50.00")
         expect(response.body).to include("Jul 16 – Aug 15", "$120.00 of $200.00", "Under by $80.00", "partial: your data starts partway through") # data starts Jul 20
         expect(response.body).not_to include("Jun 16 – Jul 15")

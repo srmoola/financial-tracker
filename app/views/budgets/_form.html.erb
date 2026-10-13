@@ -67,6 +67,6 @@
 
   <div class="flex items-center gap-3">
     <%= form.submit budget.new_record? ? "Create budget" : "Save budget", class: "btn btn-primary" %>
-    <%= link_to "Cancel", budgets_path, class: "btn btn-ghost" %>
+    <%= link_to "Cancel", budget.persisted? ? budget_path(budget) : budgets_path, class: "btn btn-ghost" %>
   </div>
 <% end %>

@@ -1,0 +1,5 @@
+<%# locals: (status:, size: "h-2.5") %>
+<%# How much of the limit is spent. %>
+<div class="<%= class_names("rounded-full bg-base-200", size) %>" role="img" aria-label="<%= number_to_percentage(status.percent, precision: 0) %> spent">
+  <div class="h-full rounded-full <%= budget_state(status)[:bar] %>" style="width: <%= status.percent.clamp(0, 100).round(1) %>%"></div>
+</div>

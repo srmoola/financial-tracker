@@ -24,7 +24,7 @@ class BudgetsController < ApplicationController
     @budget = Current.user.budgets.new(budget_params)
     if @budget.save
       @budget.reset_alerts!
-      redirect_to budgets_path, notice: "Created #{@budget.name}."
+      redirect_to @budget, notice: "Created #{@budget.name}."
     else
       render :new, status: :unprocessable_content
     end
@@ -36,7 +36,7 @@ class BudgetsController < ApplicationController
   def update
     if @budget.update(budget_params)
       @budget.reset_alerts!
-      redirect_to budgets_path, notice: "Saved #{@budget.name}."
+      redirect_to @budget, notice: "Saved #{@budget.name}."
     else
       render :edit, status: :unprocessable_content
     end

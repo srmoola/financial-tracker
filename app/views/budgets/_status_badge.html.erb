@@ -1,0 +1,13 @@
+<%# locals: (status:) %>
+<% state = budget_state(status) %>
+<span class="badge badge-soft <%= state[:badge] %> shrink-0 gap-1">
+  <% case status.state %>
+  <% when :on_track %>
+    <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>
+  <% when :over_pace %>
+    <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>
+  <% else %>
+    <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 7v6M12 17h.01"/></svg>
+  <% end %>
+  <%= state[:label] %>
+</span>
