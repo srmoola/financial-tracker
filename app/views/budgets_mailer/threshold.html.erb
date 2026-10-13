@@ -1,0 +1,8 @@
+<p>Hi <%= @budget.user.first_name %>,</p>
+<% if @threshold >= 100 %>
+  <p>You've reached your <strong><%= @budget.name %></strong> budget <%= budget_period_phrase(@budget) %>: <strong><%= number_to_currency(@status.spent) %></strong> of <%= number_to_currency(@budget.amount) %><%= " (#{number_to_currency(-@status.remaining)} over)" if @status.remaining.negative? %>.</p>
+<% else %>
+  <p>You've used <strong><%= number_to_percentage(@status.percent, precision: 0) %></strong> of your <strong><%= @budget.name %></strong> budget <%= budget_period_phrase(@budget) %>: <%= number_to_currency(@status.spent) %> of <%= number_to_currency(@budget.amount) %>, with <%= number_to_currency(@status.remaining) %> left.</p>
+<% end %>
+<p style="color: #666;">It counts <%= budget_includes(@budget).to_sentence %>. <%= budget_resets_on(@status) %>.</p>
+<p><%= link_to "See your budgets", budgets_url %></p>

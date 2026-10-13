@@ -9,6 +9,8 @@ class Transaction < ApplicationRecord
 
   # The category used everywhere: the user's choice if they made one, otherwise Plaid's.
   EFFECTIVE_CATEGORY_SQL = "COALESCE(transactions.category_override, transactions.category)".freeze
+  # Who a transaction is with: Plaid's merchant name, else the statement description.
+  MERCHANT_SQL = "COALESCE(NULLIF(transactions.merchant_name, ''), transactions.description)".freeze
 
   NOTE_MAX_LENGTH = 280
 

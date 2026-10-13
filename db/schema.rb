@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_13_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_13_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -41,6 +41,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_13_010000) do
     t.date "last_statement_issue_date"
     t.index ["plaid_account_id"], name: "index_accounts_on_plaid_account_id", unique: true
     t.index ["plaid_item_id"], name: "index_accounts_on_plaid_item_id"
+  end
+
+  create_table "budget_alerts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "budget_id", null: false
+    t.date "period_start", null: false
+    t.integer "threshold", null: false
+    t.datetime "created_at", null: false
+    t.index ["budget_id", "period_start", "threshold"], name: "idx_on_budget_id_period_start_threshold_cebaca2dc9", unique: true
+    t.index ["budget_id"], name: "index_budget_alerts_on_budget_id"
+  end
+
+  create_table "budgets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "user_id", null: false
+    t.string "name", null: false
+    t.decimal "amount", precision: 19, scale: 4, null: false
+    t.string "period", null: false
+    t.string "categories", default: [], null: false, array: true
+    t.string "merchants", default: [], null: false, array: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id"], name: "index_budgets_on_user_id"
   end
 
   create_table "daily_syncs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -285,6 +306,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_13_010000) do
 
   add_foreign_key "account_balance_snapshots", "accounts"
   add_foreign_key "accounts", "plaid_items"
+  add_foreign_key "budget_alerts", "budgets"
+  add_foreign_key "budgets", "users"
   add_foreign_key "daily_syncs", "plaid_items"
   add_foreign_key "plaid_items", "users"
   add_foreign_key "sessions", "users"
