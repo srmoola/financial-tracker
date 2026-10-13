@@ -19,9 +19,10 @@ module PlaidHelpers
     )
   end
 
-  def plaid_transaction(id:, account_id:, amount:, date: Date.new(2026, 10, 1), merchant_name: "Coffee Shop", name: "COFFEE SHOP 123", category: "FOOD_AND_DRINK", pending: false)
+  def plaid_transaction(id:, account_id:, amount:, date: Date.new(2026, 10, 1), merchant_name: "Coffee Shop", name: "COFFEE SHOP 123", category: "FOOD_AND_DRINK", pending: false,
+    logo_url: nil, website: nil)
     Plaid::Transaction.new(
-      transaction_id: id, account_id:, amount:, iso_currency_code: "USD", merchant_name:, name:, date:,
+      transaction_id: id, account_id:, amount:, iso_currency_code: "USD", merchant_name:, name:, date:, logo_url:, website:,
       pending:, pending_transaction_id: nil, payment_channel: "in store",
       personal_finance_category: Plaid::PersonalFinanceCategory.new(primary: category, detailed: "#{category}_OTHER"),
       location: Plaid::Location.new(lat: 40.7, lon: -74.0)

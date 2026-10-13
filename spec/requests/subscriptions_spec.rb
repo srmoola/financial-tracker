@@ -97,6 +97,17 @@ RSpec.describe "Subscriptions", type: :request do
       expect(response).to have_http_status(:not_found)
     end
 
+    it "shows the merchant's logo and links to its website" do
+      [ 8, 9, 10 ].each { |month| charge(6.99, Date.new(2026, month, 10), merchant: "Spotify") }
+      card.transactions.update_all(logo_url: "https://logos.example/spotify.png", website: "spotify.com")
+      [ 9, 10 ].each { |month| charge(15.49, Date.new(2026, month, 1), merchant: "Netflix") } # possible, with no logo or website
+
+      get subscriptions_path
+
+      expect(response.body).to include('src="https://logos.example/spotify.png"', 'target="_blank" rel="noopener noreferrer" title="Open spotify.com" class="hover:underline" href="https://spotify.com"')
+      expect(response.body).not_to include('href="https://netflix')
+    end
+
     it "removes a subscription's New chip" do
       [ 8, 9, 10 ].each { |month| charge(6.99, Date.new(2026, month, 10), merchant: "Spotify") } # just synced, so New
 

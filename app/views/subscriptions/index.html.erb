@@ -35,9 +35,9 @@
     <ul class="card mt-3 divide-y divide-base-300 border border-base-300 bg-base-100">
       <% @possible.each do |subscription| %>
         <li class="flex flex-wrap items-center gap-x-4 gap-y-2 px-6 py-4">
-          <div class="grid size-10 shrink-0 place-items-center rounded-xl bg-base-200 text-sm font-semibold" aria-hidden="true"><%= subscription.merchant.first.upcase %></div>
+          <%= merchant_logo(subscription.logo_url, subscription.merchant) %>
           <div class="min-w-0 flex-1">
-            <p class="truncate font-medium"><%= subscription.merchant %> <span class="font-normal text-base-content/60">· <%= number_to_currency(subscription.amount) %> <%= subscription.label.downcase %></span></p>
+            <p class="truncate font-medium"><%= website_link(subscription.merchant, subscription.website, class: "hover:underline") %> <span class="font-normal text-base-content/60">· <%= number_to_currency(subscription.amount) %> <%= subscription.label.downcase %></span></p>
             <p class="text-xs text-base-content/60">Charged <%= subscription.charges.map { |charge| charge.date.strftime("%b %-d") }.to_sentence %></p>
           </div>
           <div class="flex gap-2">

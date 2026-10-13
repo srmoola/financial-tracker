@@ -12,6 +12,7 @@ class User < ApplicationRecord
   has_many :balance_snapshots, through: :accounts
   has_many :budgets, dependent: :destroy
   has_many :subscription_marks, dependent: :delete_all
+  has_one :avatar, dependent: :delete
 
   normalizes :email_address, with: ->(e) { e.strip.downcase }
   normalizes :first_name, :last_name, with: ->(name) { name.squish }
@@ -26,6 +27,14 @@ class User < ApplicationRecord
 
   def initials
     "#{first_name.first}#{last_name.first}".upcase
+  end
+
+  # When the avatar last changed (for its URL, so a new one isn't cached), or
+  # nil without one. Doesn't load the image.
+  def avatar_version
+    return @avatar_version if defined?(@avatar_version)
+
+    @avatar_version = Avatar.where(user: self).pick(:updated_at)&.to_i
   end
 
   def email_verified? = email_verified_at.present?

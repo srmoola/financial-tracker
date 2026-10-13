@@ -26,6 +26,16 @@ RSpec.describe "Onboarding and the Accounts page", type: :request do
     expect(response.body).to include("First Platypus Bank", "Plaid Credit Card", "Credit Card · •••• 3333", "−$410.00", "updated about 1 hour ago")
   end
 
+  it "shows a bank's logo and links to its website, when Plaid has them" do
+    sign_in_as users(:one)
+    users(:one).plaid_items.create!(item_id: "item-1", access_token: "token", institution_name: "First Platypus Bank", institution_url: "https://platypus.example", institution_logo: "iVBORw0KGgo=")
+    users(:one).plaid_items.create!(item_id: "item-2", access_token: "token-2", institution_name: "Second Bank")
+
+    get accounts_path
+
+    expect(response.body).to include('src="data:image/png;base64,iVBORw0KGgo="', 'title="Open platypus.example" class="hover:underline" href="https://platypus.example"', "SB") # the second's initials
+  end
+
   it "marks $0 accounts as not shown on the dashboard" do
     sign_in_as users(:one)
     item = users(:one).plaid_items.create!(item_id: "item-1", access_token: "token", institution_name: "First Platypus Bank")

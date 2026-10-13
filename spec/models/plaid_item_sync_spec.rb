@@ -65,5 +65,40 @@ RSpec.describe PlaidItem, "connecting and syncing balances" do
 
       expect(item.accounts.sole.balance_snapshots).to be_empty
     end
+
+    describe "#sync_institution_details!" do
+      def institution_response(url:, logo:)
+        Plaid::InstitutionsGetByIdResponse.new(institution: Plaid::Institution.new(institution_id: "ins_109508", name: "First Platypus Bank", url:, logo:))
+      end
+
+      before { item.update!(institution_id: "ins_109508") }
+
+      it "saves the bank's website and logo, once" do
+        allow(api).to receive(:institutions_get_by_id).and_return(institution_response(url: "https://platypus.example", logo: "iVBORw0KGgo="))
+
+        item.sync_institution_details!
+        item.sync_institution_details!
+
+        expect(item.reload).to have_attributes(institution_url: "https://platypus.example", institution_logo: "iVBORw0KGgo=")
+        expect(api).to have_received(:institutions_get_by_id).once
+          .with(having_attributes(institution_id: "ins_109508", country_codes: [ "US" ], options: having_attributes(include_optional_metadata: true)))
+      end
+
+      it "asks again next time when Plaid has neither" do
+        allow(api).to receive(:institutions_get_by_id).and_return(institution_response(url: "", logo: nil))
+
+        2.times { item.sync_institution_details! }
+
+        expect(item.reload).to have_attributes(institution_url: nil, institution_logo: nil)
+        expect(api).to have_received(:institutions_get_by_id).twice
+      end
+
+      it "doesn't fail the sync over a Plaid error" do
+        allow(api).to receive(:institutions_get_by_id).and_raise(plaid_api_error("INSTITUTION_NOT_FOUND"))
+
+        expect { item.sync_institution_details! }.not_to raise_error
+        expect(item.reload.institution_url).to be_nil
+      end
+    end
   end
 end

@@ -61,6 +61,7 @@ RSpec.describe "Credit card statement dates" do
       allow(api).to receive(:accounts_get).and_return(plaid_accounts_response([ plaid_account(id: "card-1", type: "credit", subtype: "credit card", current: 10) ]))
       allow(api).to receive(:transactions_sync).and_return(plaid_sync_response)
       allow(api).to receive(:liabilities_get).and_return(liabilities_response("card-1" => Date.new(2026, 9, 16)))
+      allow(api).to receive(:institutions_get_by_id).and_return(Plaid::InstitutionsGetByIdResponse.new(institution: Plaid::Institution.new(institution_id: "ins_109508", name: "First Platypus Bank")))
     end
 
     it "fetches statement dates along with balances and transactions" do

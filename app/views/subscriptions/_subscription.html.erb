@@ -4,11 +4,11 @@
   <%= turbo_frame_tag subscription.dom_id do %>
     <div data-controller="disclosure">
       <div class="flex cursor-pointer items-center gap-4 px-5 py-4 transition-colors hover:bg-base-200/50 sm:px-6" data-action="click->disclosure#toggle">
-        <div class="grid size-10 shrink-0 place-items-center rounded-xl bg-base-200 text-sm font-semibold" aria-hidden="true"><%= subscription.merchant.first.upcase %></div>
+        <%= merchant_logo(subscription.logo_url, subscription.merchant) %>
         <div class="min-w-0 flex-1">
           <%# The + to add a tag shows when hovering over the name and tags (always, on touch screens). %>
           <div class="group/tags flex flex-wrap items-center gap-1.5">
-            <p class="mr-0.5 truncate font-medium"><%= subscription.merchant %></p>
+            <p class="mr-0.5 truncate font-medium"><%= website_link(subscription.merchant, subscription.website, class: "hover:underline") %></p>
             <% if subscription.new? %>
               <span class="badge badge-sm gap-0.5 border-error/25 bg-error/10 pr-0.5 text-error">
                 New

@@ -1,6 +1,6 @@
 # Turns the Monday summary email on or off: from the link in the email (by
 # token, no login needed), from mail clients' one-click unsubscribe, or from
-# the Accounts page.
+# the Settings page.
 class WeeklyEmailsController < ApplicationController
   layout "auth"
   allow_unauthenticated_access
@@ -15,7 +15,7 @@ class WeeklyEmailsController < ApplicationController
     enabled = params[:enabled] == "1"
     @user.update!(weekly_digest: enabled)
     notice = enabled ? "You'll get a summary email every Monday." : "You won't get weekly emails anymore."
-    redirect_to params[:token].present? ? weekly_email_path(token: params[:token]) : accounts_path, notice:, status: :see_other
+    redirect_to params[:token].present? ? weekly_email_path(token: params[:token]) : settings_path, notice:, status: :see_other
   end
 
   # One-click unsubscribe from a mail client.

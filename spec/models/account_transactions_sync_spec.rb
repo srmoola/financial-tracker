@@ -9,7 +9,7 @@ RSpec.describe Account, "syncing transactions" do
 
   it "pages through /transactions/sync for just this account, saving transactions and the cursor" do
     allow(api).to receive(:transactions_sync).and_return(
-      plaid_sync_response(added: [ plaid_transaction(id: "t1", account_id: "card-1", amount: 4.5) ], next_cursor: "page-2", has_more: true),
+      plaid_sync_response(added: [ plaid_transaction(id: "t1", account_id: "card-1", amount: 4.5, logo_url: "https://logos.example/coffee.png", website: "coffee.example") ], next_cursor: "page-2", has_more: true),
       plaid_sync_response(added: [ plaid_transaction(id: "t2", account_id: "card-1", amount: -100, merchant_name: nil, name: "PAYMENT", category: "LOAN_PAYMENTS") ], next_cursor: "done")
     )
 
@@ -21,9 +21,22 @@ RSpec.describe Account, "syncing transactions" do
     expect(card.reload.transaction_sync_cursor).to eq("done")
     expect(card.transactions.find_by!(plaid_transaction_id: "t1")).to have_attributes(
       amount: 4.5, merchant_name: "Coffee Shop", description: "COFFEE SHOP 123", category: "FOOD_AND_DRINK",
-      date: Date.new(2026, 10, 1), currency_code: "USD", payment_channel: "in store", latitude: 40.7, longitude: -74.0, pending: false
+      date: Date.new(2026, 10, 1), currency_code: "USD", payment_channel: "in store", latitude: 40.7, longitude: -74.0, pending: false,
+      logo_url: "https://logos.example/coffee.png", website: "coffee.example"
     )
     expect(card.transactions.find_by!(plaid_transaction_id: "t2")).to have_attributes(amount: -100, merchant_name: nil, description: "PAYMENT")
+  end
+
+  it "fills in logos and websites on saved transactions when syncing from the start again, keeping what the user set" do
+    saved = card.transactions.create!(plaid_transaction_id: "t1", amount: 4.5, date: Date.new(2026, 10, 1), category_override: "TRAVEL", note: "Work trip", created_at: 1.month.ago)
+    allow(api).to receive(:transactions_sync).and_return(
+      plaid_sync_response(added: [ plaid_transaction(id: "t1", account_id: "card-1", amount: 4.5, logo_url: "https://logos.example/coffee.png", website: "coffee.example") ])
+    )
+
+    expect { card.sync_transactions! }.not_to change(Transaction, :count)
+
+    expect(saved.reload).to have_attributes(logo_url: "https://logos.example/coffee.png", website: "coffee.example", category_override: "TRAVEL", note: "Work trip")
+    expect(saved.created_at).to be < 1.week.ago # still arrived when it first did, so it isn't "new"
   end
 
   it "continues from the saved cursor, applying changes and removals" do
@@ -100,6 +113,7 @@ RSpec.describe Account, "syncing transactions" do
     ]))
     allow(api).to receive(:transactions_sync).and_return(plaid_sync_response)
     allow(api).to receive(:liabilities_get).and_raise(plaid_api_error("NO_LIABILITY_ACCOUNTS"))
+    allow(api).to receive(:institutions_get_by_id).and_raise(plaid_api_error("INSTITUTION_NOT_FOUND"))
     card
 
     item.sync!
