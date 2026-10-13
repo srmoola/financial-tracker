@@ -70,6 +70,36 @@ RSpec.describe "Subscriptions", type: :request do
       expect(response.body).to include("Added iCloud.", "iCloud", "Yearly", "Next Sep 5, 2027", "$99.00", "a year")
     end
 
+    it "keeps a note on each subscription, to tell apart ones from the same merchant" do
+      [ 8, 9, 10 ].each { |month| charge(14.99, Date.new(2026, month, 2), merchant: "Amazon") }
+      [ 8, 9, 10 ].each { |month| charge(9.99, Date.new(2026, month, 20), merchant: "Amazon") }
+
+      post note_subscriptions_path, params: { subscription: { merchant: "Amazon", amount: "14.99", period: "monthly" }, note: "  Prime  Video " }
+      expect(response).to redirect_to(subscriptions_path)
+      post note_subscriptions_path, params: { subscription: { merchant: "Amazon", amount: "9.99", period: "monthly" }, note: "Groceries" }
+
+      get subscriptions_path
+      expect(response.body).to include("Amazon <span class=\"font-normal text-base-content/60\">· Prime Video</span>", "· Groceries", 'value="Prime Video"')
+      expect(users(:one).subscription_marks.pluck(:kind, :amount, :note)).to contain_exactly([ "confirmed", 14.99, "Prime Video" ], [ "confirmed", 9.99, "Groceries" ])
+
+      post note_subscriptions_path, params: { subscription: { merchant: "Amazon", amount: "9.99", period: "monthly" }, note: " " } # blank removes it
+      expect(users(:one).subscription_marks.pluck(:note)).to contain_exactly("Prime Video", nil)
+
+      post note_subscriptions_path, params: { subscription: { merchant: "Amazon", amount: "14.99", period: "monthly" }, note: "x" * 41 }
+      expect(response).to have_http_status(:unprocessable_content)
+      post note_subscriptions_path, params: { subscription: { merchant: "Hulu", amount: "9.99", period: "monthly" }, note: "Nope" }
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it "keeps a note with an added subscription's own mark" do
+      icloud = charge(99, Date.new(2026, 9, 5), merchant: "iCloud")
+      post subscriptions_path, params: { transaction_id: icloud.id, period: "yearly" }
+
+      post note_subscriptions_path, params: { subscription: { merchant: "iCloud", amount: "99.0", period: "yearly" }, note: "Family storage" }
+
+      expect(users(:one).subscription_marks.pluck(:kind, :note)).to eq([ [ "added", "Family storage" ] ])
+    end
+
     it "won't add another user's charge" do
       theirs = users(:two).plaid_items.create!(item_id: "item-2", access_token: "token-2")
         .accounts.create!(plaid_account_id: "card-2", name: "Theirs", account_type: "credit", subtype: "credit card")

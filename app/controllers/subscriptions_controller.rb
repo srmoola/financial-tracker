@@ -1,5 +1,5 @@
 # The subscriptions found in the user's card purchases (see Subscription),
-# and adding, confirming or dismissing them.
+# and adding, confirming, dismissing or noting them.
 class SubscriptionsController < ApplicationController
   ADD_FROM_DAYS = 90
 
@@ -35,6 +35,21 @@ class SubscriptionsController < ApplicationController
   def dismiss
     mark = mark!("dismissed")
     redirect_to subscriptions_path, notice: "#{mark.merchant} won't show up as a subscription.", status: :see_other
+  end
+
+  # Saves a subscription's note (blank removes it). One without a mark yet gets
+  # a "confirmed" one to hold it: noting it says it's a subscription.
+  def note
+    key = params.expect(subscription: [ :merchant, :amount, :period ])
+    subscription = Subscription.for(Current.user).find { |candidate| candidate.key == { merchant: key[:merchant], amount: BigDecimal(key[:amount]), period: key[:period] } } or
+      raise ActiveRecord::RecordNotFound
+    mark = subscription.mark || Current.user.subscription_marks.new(kind: "confirmed", **subscription.key)
+
+    if mark.update(note: params[:note].to_s)
+      redirect_to subscriptions_path, status: :see_other
+    else
+      head :unprocessable_content
+    end
   end
 
   private

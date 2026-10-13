@@ -32,6 +32,7 @@ Rails.application.routes.draw do
     collection do
       post :confirm
       post :dismiss
+      post :note
     end
   end
 
