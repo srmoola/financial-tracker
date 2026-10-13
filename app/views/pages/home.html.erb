@@ -37,10 +37,7 @@
   <%= has_history ? history : breakdown %>
 </div>
 
-<div class="mt-8">
-  <%= has_history ? breakdown : history %>
-</div>
-
+<%# The other sections, right below whichever leads. %>
 <div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
   <% SampleData::HIGHLIGHTS.each do |highlight| %>
     <% item = nav_item(highlight.section) %>
@@ -79,4 +76,8 @@
       </div>
     <% end %>
   <% end %>
+</div>
+
+<div class="mt-8">
+  <%= has_history ? breakdown : history %>
 </div>
