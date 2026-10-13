@@ -28,7 +28,7 @@
         <div class="card border border-base-300 bg-base-100" data-controller="dialog">
           <div class="flex items-center gap-4 px-5 py-4 sm:px-6">
             <% if plaid_item.institution_logo %>
-              <%= image_tag "data:image/png;base64,#{plaid_item.institution_logo}", alt: "", class: "size-11 shrink-0 rounded-xl border border-base-300 bg-white object-contain p-1" %>
+              <%= image_tag "data:image/png;base64,#{plaid_item.institution_logo}", alt: "", class: "size-11 shrink-0 rounded-xl border border-base-300 bg-white object-cover" %>
             <% else %>
               <div class="grid size-11 shrink-0 place-items-center rounded-xl bg-primary text-sm font-bold text-primary-content" aria-hidden="true">
                 <%= institution_initials(institution) %>

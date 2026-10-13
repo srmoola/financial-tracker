@@ -21,7 +21,7 @@ module LogosHelper
   # A merchant's logo, or the first letter of its name when there isn't one.
   def merchant_logo(logo_url, name)
     if logo_url
-      image_tag logo_url, alt: "", loading: "lazy", class: "size-10 shrink-0 rounded-xl border border-base-300 bg-white object-contain p-1"
+      image_tag logo_url, alt: "", loading: "lazy", class: "size-10 shrink-0 rounded-xl border border-base-300 bg-white object-cover"
     else
       tag.div name.first.upcase, class: "grid size-10 shrink-0 place-items-center rounded-xl bg-base-200 text-sm font-semibold", aria: { hidden: true }
     end
