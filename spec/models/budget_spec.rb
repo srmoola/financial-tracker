@@ -82,6 +82,42 @@ RSpec.describe Budget do
     expect(weekly.status.state).to eq(:over)
   end
 
+  describe "history" do
+    it "lists past statement months, newest first, back to the first transaction, marking partial ones" do
+      card
+      spend(250, Date.new(2026, 9, 10))  # Aug 16 – Sep 15: over
+      spend(80, Date.new(2026, 8, 1))    # Jul 16 – Aug 15: under, but data starts Aug 1
+      spend(30, Date.new(2026, 10, 1))   # this period: not history
+
+      history = budget.history(6)
+
+      expect(history.map { |status, partial| [ status.starts_on, status.resets_on, status.spent, status.over?, partial ] }).to eq([
+        [ Date.new(2026, 8, 16), Date.new(2026, 9, 16), 250, true, false ],
+        [ Date.new(2026, 7, 16), Date.new(2026, 8, 16), 80, false, true ]
+      ])
+    end
+
+    it "lists past weeks from Monday to Sunday" do
+      card
+      spend(20, Date.new(2026, 10, 5))  # Monday of last week
+      spend(15, Date.new(2026, 10, 11)) # Sunday of last week
+      spend(9, Date.new(2026, 9, 28))   # the week before
+
+      history = budget(period: "weekly", amount: 30).history(8)
+
+      expect(history.map { |status, _| [ status.starts_on, status.spent, status.over? ] }).to eq([
+        [ Date.new(2026, 10, 5), 35, true ],
+        [ Date.new(2026, 9, 28), 9, false ]
+      ])
+    end
+
+    it "is empty without transactions" do
+      card
+
+      expect(budget.history(6)).to eq([])
+    end
+  end
+
   describe "alerts" do
     it "emails the highest threshold reached, once per period" do
       card

@@ -17,6 +17,8 @@ class Budget < ApplicationRecord
     def remaining = amount - spent
     def elapsed_percent = ((today - starts_on + 1) * 100.0 / (resets_on - starts_on)).clamp(0, 100)
 
+    def over? = spent > amount
+
     # :over (past the limit), :over_pace (spending faster than the period is passing) or :on_track.
     def state
       return :over if spent > amount
@@ -40,15 +42,35 @@ class Budget < ApplicationRecord
 
   def weekly? = period == "weekly"
 
-  def status(today: Date.current)
-    starts_on, resets_on = period_dates(today)
-    Status.new(amount:, spent: [ transactions(today:).sum(:amount), 0 ].max, starts_on:, resets_on:, today:)
+  # This period's numbers, or with `back`, a past period's (1 = the one before
+  # this, and so on), judged at its end.
+  def status(today: Date.current, back: 0)
+    starts_on, resets_on = period_dates(today, back)
+    Status.new(amount:, spent: [ transactions(today:, back:).sum(:amount), 0 ].max, starts_on:, resets_on:, today: back.zero? ? today : resets_on - 1)
   end
 
-  # This period's transactions that count toward the budget.
-  def transactions(today: Date.current)
+  # How the last `count` periods went, newest first, as far back as there are
+  # transactions: [status, partial], where `partial` means the data starts
+  # partway through that period. Past periods use the budget as it is now.
+  def history(count, today: Date.current)
+    first_date = Transaction.where(account: user.accounts.credit_cards).minimum(:date) or return []
+
+    (1..count).lazy.map { |back| status(today:, back:) }
+      .take_while { |status| status.resets_on > first_date }
+      .map { |status| [ status, status.starts_on < first_date ] }.to_a
+  end
+
+  # The transactions that count toward the budget this period (or `back` periods ago).
+  def transactions(today: Date.current, back: 0)
     cards = user.accounts.credit_cards.to_a
-    in_period = weekly? ? Transaction.where(account: cards, date: today.beginning_of_week(:monday)..) : Transaction.in_statement_periods(cards)
+    in_period =
+      if weekly?
+        week = today.beginning_of_week(:monday) - (back * 7)
+        Transaction.where(account: cards, date: week...(week + 7))
+      else
+        cards.map { |card| Transaction.where(account: card, date: card.statement_period_start(back, today:)...card.statement_period_start(back - 1, today:)) }
+          .reduce(:or) || Transaction.none
+      end
 
     matches = []
     matches << self.class.sanitize_sql_array([ "#{Transaction::EFFECTIVE_CATEGORY_SQL} IN (?)", categories ]) if categories.any?
@@ -75,20 +97,25 @@ class Budget < ApplicationRecord
   # After the limit or what counts changes: forget this period's alerts, and
   # record the ones already reached without emailing.
   def reset_alerts!(today: Date.current)
-    alerts.where(period_start: period_dates(today).first).delete_all
+    alerts.where(period_start: period_dates(today, 0).first).delete_all
     send_alerts!(silently: true, today:)
   end
 
   private
-    # The period's first day and the day it resets. A statement month with
-    # several cards starts at the most recent card's statement and resets at the
-    # next one; cards without a statement date follow calendar months.
-    def period_dates(today)
-      return [ today.beginning_of_week(:monday), today.beginning_of_week(:monday) + 7 ] if weekly?
+    # The first day of the period `back` periods ago (0 = this one) and the day
+    # it resets. A statement month with several cards starts at the most recent
+    # card's statement and resets at the next one; cards without a statement
+    # date follow calendar months.
+    def period_dates(today, back)
+      if weekly?
+        week = today.beginning_of_week(:monday) - (back * 7)
+        return [ week, week + 7 ]
+      end
 
-      starts = user.accounts.credit_cards.map { |card| card.current_statement_start(today:) }
-      starts = [ today.beginning_of_month ] if starts.empty?
-      [ starts.max, starts.map(&:next_month).min ]
+      cards = user.accounts.credit_cards.to_a
+      return [ today.beginning_of_month << back, today.beginning_of_month << (back - 1) ] if cards.empty?
+
+      [ cards.map { |card| card.statement_period_start(back, today:) }.max, cards.map { |card| card.statement_period_start(back - 1, today:) }.min ]
     end
 
     def counts_something

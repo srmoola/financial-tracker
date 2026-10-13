@@ -60,11 +60,30 @@ RSpec.describe "Budgets", type: :request do
       expect(response).to redirect_to(budgets_path)
     end
 
+    it "shows how past periods went, on the card and on the budget's own page" do
+      travel_to Date.new(2026, 10, 14) do
+        card.update!(last_statement_issue_date: Date.new(2026, 9, 15))
+        card.transactions.create!(plaid_transaction_id: "t1", amount: 250, date: Date.new(2026, 9, 10), category: "FOOD_AND_DRINK")
+        card.transactions.create!(plaid_transaction_id: "t2", amount: 120, date: Date.new(2026, 7, 20), category: "FOOD_AND_DRINK")
+        budget = users(:one).budgets.create!(name: "Going out", amount: 200, period: "monthly", categories: %w[ FOOD_AND_DRINK ])
+
+        get budgets_path
+        expect(response.body).to include("History", "Under budget in 0 of the last 1 month", budget_path(budget))
+
+        get budget_path(budget)
+        expect(response.body).to include("Aug 16 – Sep 15", "$250.00 of $200.00", "Over by $50.00")
+        expect(response.body).to include("Jul 16 – Aug 15", "$120.00 of $200.00", "Under by $80.00", "partial: your data starts partway through") # data starts Jul 20
+        expect(response.body).not_to include("Jun 16 – Jul 15")
+      end
+    end
+
     it "never shows or changes another user's budget" do
       theirs = users(:two).budgets.create!(name: "Theirs", amount: 100, period: "weekly", categories: %w[ TRAVEL ])
 
       get budgets_path
       expect(response.body).not_to include("Theirs")
+      get budget_path(theirs)
+      expect(response).to have_http_status(:not_found)
 
       get edit_budget_path(theirs)
       expect(response).to have_http_status(:not_found)

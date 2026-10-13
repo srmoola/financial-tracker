@@ -19,7 +19,7 @@ Rails.application.routes.draw do
   # App sections that aren't built yet. Each gets a placeholder page until its real controller exists.
   resources :transactions, only: %i[ index update ]
 
-  resources :budgets, except: :show
+  resources :budgets
 
   %w[ subscriptions taxes ].each do |section|
     get section, to: "coming_soon#show", defaults: { section: section }, as: section

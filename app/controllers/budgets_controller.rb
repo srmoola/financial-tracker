@@ -2,11 +2,18 @@
 class BudgetsController < ApplicationController
   MERCHANT_CHOICES = 60
 
-  before_action :set_budget, only: %i[ edit update destroy ]
+  HISTORY_PERIODS = 12
+
+  before_action :set_budget, only: %i[ show edit update destroy ]
   helper_method :merchant_choices
 
   def index
     @budgets = Current.user.budgets.order(:created_at).map { |budget| [ budget, budget.status ] }
+  end
+
+  def show
+    @status = @budget.status
+    @history = @budget.history(HISTORY_PERIODS)
   end
 
   def new
