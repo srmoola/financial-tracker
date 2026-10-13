@@ -13,15 +13,17 @@ class SpendingHistory
   # `purchases`: the purchases (positive amounts) to chart, already limited to
   # the range. `category_keys`: the donut's named categories; anything else is
   # counted as :other. `periods_back`: statement periods before the current
-  # one (nil for all time).
-  def initialize(purchases, cards:, category_keys:, periods_back:, today: Date.current)
+  # one (nil for all time). `since`: a start date instead of statements (e.g.
+  # the last 7 days), always charted by day.
+  def initialize(purchases, cards:, category_keys:, periods_back:, since: nil, today: Date.current)
     @cards = cards
     @today = today
     @group = ->(category) { category_keys.include?(category) ? category : :other }
     rows = purchases.with_parts.pluck(:id, :account_id, :date, Arel.sql(Transaction::PART_CATEGORY_SQL), Arel.sql(Transaction::PART_AMOUNT_SQL))
 
-    @daily = periods_back.present? && periods_back < DAILY_UNDER_PERIODS
-    @points = with_top_purchases(@daily ? daily_points(rows, periods_back) : period_points(rows, periods_back || periods_since(rows)))
+    @daily = since.present? || (periods_back.present? && periods_back < DAILY_UNDER_PERIODS)
+    start = since || (@cards.map { |card| card.statement_period_start(periods_back, today: @today) }.min if @daily)
+    @points = with_top_purchases(@daily ? daily_points(rows, start) : period_points(rows, periods_back || periods_since(rows)))
   end
 
   # True when points are days with running totals, not statement periods.
@@ -29,13 +31,13 @@ class SpendingHistory
   def empty? = points.none? { |point| point.total.positive? }
 
   private
-    # A running total per category for each day since the range's first statement
-    # period began, with that day's purchases.
-    def daily_points(rows, periods_back)
+    # A running total per category for each day from `start` (e.g. when the
+    # range's first statement period began), with that day's purchases.
+    def daily_points(rows, start)
       by_day = rows.group_by { |_, _, date, _, _| date }
 
       running = Hash.new(0)
-      (@cards.map { |card| card.statement_period_start(periods_back, today: @today) }.min..@today).map do |day|
+      (start..@today).map do |day|
         day_rows = by_day.fetch(day, [])
         day_rows.each { |_, _, _, category, amount| running[@group.(category)] += amount }
         [ { date: day, label: day.strftime("%b %-d, %Y"), total: running.values.sum, by_category: running.dup }, day_rows ]

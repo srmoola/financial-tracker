@@ -33,6 +33,14 @@ RSpec.describe LineChartHelper, type: :helper do
     expect(chart_for(series(:a, dates.map { 1 })).x_ticks.map(&:label)).to eq(%w[ Feb Mar ])
   end
 
+  context "for a week or less" do
+    let(:dates) { (Date.new(2026, 10, 7)..Date.new(2026, 10, 13)).to_a }
+
+    it "labels every day" do
+      expect(chart_for(series(:a, dates.map { 1 })).x_ticks.map(&:label)).to eq([ "Wed 7", "Thu 8", "Fri 9", "Sat 10", "Sun 11", "Mon 12", "Tue 13" ])
+    end
+  end
+
   it "spreads end labels apart when lines end close together" do
     lines = [ 50.0, 52.0, 10.0 ].map { |end_y| LineChartHelper::Line.new(key: end_y, label: "", color: "", points: "", end_y:) }
 

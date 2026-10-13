@@ -56,9 +56,12 @@ module LineChartHelper
       [ 1, 2, 2.5, 5, 10 ].map { |factor| factor * magnitude }.find { |step| step >= rough }
     end
 
-    # Mondays for short ranges, otherwise the first of each month. Skips labels
-    # too close to the edges to fit.
+    # Every day for a week or less, Mondays for short ranges, otherwise the first
+    # of each month. Skips labels too close to the edges to fit (except daily ones).
     def date_ticks(dates)
+      # A week or less: every day, e.g. "Wed 7".
+      return dates.each_with_index.map { |date, index| [ index, date.strftime("%a %-d") ] } if dates.size <= 7
+
       short = dates.size <= 31
       dates.each_with_index.filter_map do |date, index|
         next unless short ? date.monday? : date.day == 1
