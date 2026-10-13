@@ -34,7 +34,7 @@ RSpec.describe "Subscriptions", type: :request do
 
       get subscriptions_path
 
-      expect(response.body).to include("$6.99", "a month", "$83.88", "a year · 1 subscription", "Spotify", "Monthly · Quicksilver •••• 3333", "Next Nov 10")
+      expect(response.body).to include("$6.99", "a month", "$83.88", "a year · 1 subscription", "Spotify", "Monthly · Quicksilver •••• 3333", "Next Nov 10, 2026")
       expect(response.body).to include("Possible subscriptions", "Netflix", "Charged Sep 1 and Oct 1", "Yes, Netflix is a subscription")
       expect(response.body).to include("Ended (1)", "Hulu", "Last Jul 1")
     end
@@ -67,7 +67,7 @@ RSpec.describe "Subscriptions", type: :request do
       post subscriptions_path, params: { transaction_id: icloud.id, period: "yearly" }
       expect(response).to redirect_to(subscriptions_path)
       follow_redirect!
-      expect(response.body).to include("Added iCloud.", "iCloud", "Yearly", "Next Sep 5", "$99.00", "a year")
+      expect(response.body).to include("Added iCloud.", "iCloud", "Yearly", "Next Sep 5, 2027", "$99.00", "a year")
     end
 
     it "won't add another user's charge" do
