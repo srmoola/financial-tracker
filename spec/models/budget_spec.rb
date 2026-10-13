@@ -65,9 +65,9 @@ RSpec.describe Budget do
     travel_to Date.new(2026, 9, 20) # day 5 of Sep 16 – Oct 15: 16.7% of the period passed
     going_out = budget
 
-    spend(40, Date.new(2026, 9, 18)) # 20%
+    spend(60, Date.new(2026, 9, 18)) # 30%: ahead, but within 20 points
     expect(going_out.status.state).to eq(:on_track)
-    spend(20, Date.new(2026, 9, 19)) # 30%: more than 10 points ahead
+    spend(20, Date.new(2026, 9, 19)) # 40%: more than 20 points ahead
     expect(going_out.status.state).to eq(:over_pace)
     spend(150, Date.new(2026, 9, 19))
     expect(going_out.status.state).to eq(:over)

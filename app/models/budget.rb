@@ -10,7 +10,7 @@ class Budget < ApplicationRecord
   NOT_SPENDING = %w[ LOAN_PAYMENTS TRANSFER_IN TRANSFER_OUT INCOME ].freeze
   CATEGORIES = (Transaction::CATEGORIES - NOT_SPENDING).freeze
   # Spending this much faster than the period is passing (in percentage points) counts as over pace.
-  PACE_MARGIN = 10
+  PACE_MARGIN = 20
 
   # A period's numbers. `limit`: the budget's amount plus anything rolled over
   # into it (`carried`). `elapsed_percent`: how much of the period has passed,
