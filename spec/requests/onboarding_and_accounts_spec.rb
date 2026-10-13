@@ -1,10 +1,15 @@
 require "rails_helper"
 
 RSpec.describe "Onboarding and the Accounts page", type: :request do
+  include ActiveJob::TestHelper
+
   fixtures :users
 
-  it "sends new sign-ups to the connect-accounts step, which they can skip" do
-    post sign_up_path, params: { user: { first_name: "Ada", last_name: "Lovelace", email_address: "ada@example.com", password: "password123", password_confirmation: "password123" } }
+  it "sends new sign-ups to the connect-accounts step once their email is confirmed, which they can skip" do
+    perform_enqueued_jobs do
+      post sign_up_path, params: { user: { first_name: "Ada", last_name: "Lovelace", email_address: "ada@example.com", password: "password123", password_confirmation: "password123" } }
+    end
+    post email_verification_path, params: { code: ActionMailer::Base.deliveries.last.subject[/\d{6}/] }
     expect(response).to redirect_to(onboarding_path)
 
     follow_redirect!

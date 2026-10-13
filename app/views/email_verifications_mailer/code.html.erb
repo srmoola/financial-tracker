@@ -1,0 +1,5 @@
+<p>Hi <%= @user.first_name %>,</p>
+<p>Your Financial Tracker code is:</p>
+<p style="font-size: 32px; font-weight: bold; letter-spacing: 6px; margin: 16px 0;"><%= @code %></p>
+<p>Enter it to confirm your email address. It expires in <%= distance_of_time_in_words(0, User::EMAIL_CODE_EXPIRES_IN) %>.</p>
+<p style="color: #666;">If you didn't sign up for Financial Tracker, you can ignore this email.</p>

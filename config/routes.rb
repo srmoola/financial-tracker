@@ -2,6 +2,9 @@ Rails.application.routes.draw do
   resource :session
   resources :passwords, param: :token
   resource :sign_up, only: %i[ show create ]
+  resource :email_verification, only: %i[ show create ] do
+    post :resend
+  end
   resource :onboarding, only: :show, controller: "onboarding"
 
   # Connecting accounts with Plaid Link

@@ -5,9 +5,11 @@ one:
   last_name: Doe
   email_address: one@example.com
   password_digest: <%= password_digest %>
+  email_verified_at: <%= 1.month.ago.to_fs(:db) %>
 
 two:
   first_name: John
   last_name: Smith
   email_address: two@example.com
   password_digest: <%= password_digest %>
+  email_verified_at: <%= 1.month.ago.to_fs(:db) %>

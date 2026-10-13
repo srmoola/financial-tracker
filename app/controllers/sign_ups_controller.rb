@@ -11,7 +11,8 @@ class SignUpsController < ApplicationController
     @user = User.new(sign_up_params)
     if @user.save
       start_new_session_for(@user)
-      redirect_to onboarding_path
+      EmailVerificationsMailer.code(@user, @user.generate_email_verification_code!).deliver_later
+      redirect_to email_verification_path
     else
       render :show, status: :unprocessable_content
     end
