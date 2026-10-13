@@ -1,0 +1,23 @@
+<%# locals: (budget:, transaction:, back:, excluded:) %>
+<%# A transaction on a budget's page, with a button to take it out of the budget (or put it back). %>
+<li class="<%= class_names("flex items-center gap-4 px-6 py-3", "opacity-60": excluded) %>">
+  <div class="grid size-9 shrink-0 place-items-center rounded-xl bg-base-200 text-sm font-semibold" aria-hidden="true">
+    <%= transaction.masked_description? ? "?" : transaction.display_name.first.upcase %>
+  </div>
+  <div class="min-w-0 flex-1">
+    <p class="truncate font-medium"><%= transaction.display_name %></p>
+    <p class="truncate text-xs text-base-content/60"><%= SpendingBreakdown.label_for(transaction.effective_category) %> · <%= transaction.date.strftime("%b %-d") %></p>
+  </div>
+  <p class="flex-none font-semibold tabular-nums">
+    <%= transaction.amount.negative? ? "+#{number_to_currency(transaction.amount.abs)}" : number_to_currency(transaction.amount) %>
+  </p>
+  <% if excluded %>
+    <%= button_to "Count again", budget_exclusion_path(budget, transaction, back: (back if back.positive?)), method: :delete, class: "btn btn-ghost btn-xs" %>
+  <% else %>
+    <%= button_to budget_exclusions_path(budget, transaction_id: transaction.id, back: (back if back.positive?)),
+          class: "btn btn-ghost btn-square btn-sm text-base-content/50 hover:text-base-content",
+          aria: { label: "Don't count #{transaction.display_name} in #{budget.name}" }, title: "Don't count this in #{budget.name}" do %>
+      <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    <% end %>
+  <% end %>
+</li>

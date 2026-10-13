@@ -1,0 +1,72 @@
+<%# locals: (budget:) %>
+<%= form_with model: budget, class: "space-y-8" do |form| %>
+  <% if budget.errors.any? %>
+    <div role="alert" class="alert alert-error alert-soft">
+      <ul>
+        <% budget.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="grid gap-5 sm:grid-cols-2">
+    <div>
+      <%= form.label :name, class: "mb-1.5 block text-sm font-medium" %>
+      <%= form.text_field :name, required: true, maxlength: 50, placeholder: "Going out", class: "input input-lg w-full" %>
+    </div>
+    <div>
+      <%= form.label :amount, "Monthly limit", class: "mb-1.5 block text-sm font-medium" %>
+      <label class="input input-lg w-full">
+        <span class="text-base-content/60">$</span>
+        <%= form.number_field :amount, required: true, min: 1, step: 0.01, placeholder: "500", value: (budget.amount&.to_s("F")&.delete_suffix(".0")), class: "grow" %>
+      </label>
+    </div>
+  </div>
+
+  <label class="flex cursor-pointer items-start gap-3">
+    <%= form.check_box :rollover, class: "toggle toggle-sm mt-0.5" %>
+    <span>
+      <span class="block text-sm font-medium">Roll over what's left</span>
+      <span class="block text-sm text-base-content/60">Money you don't spend carries into the next month. Going over doesn't take from the next one.</span>
+    </span>
+  </label>
+
+  <fieldset>
+    <legend class="text-sm font-medium">Categories</legend>
+    <p class="mb-3 text-sm text-base-content/60">Purchases in these categories count toward the budget.</p>
+    <div class="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+      <%= form.collection_check_boxes :categories, Budget::CATEGORIES.map { |category| [ category, SpendingBreakdown.label_for(category) ] }.sort_by(&:last), :first, :last do |box| %>
+        <label class="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 hover:bg-base-200">
+          <%= box.check_box(class: "checkbox checkbox-sm") %>
+          <span><%= box.text %></span>
+        </label>
+      <% end %>
+    </div>
+  </fieldset>
+
+  <fieldset data-controller="list-filter">
+    <legend class="text-sm font-medium">Merchants <span class="font-normal text-base-content/60">(optional)</span></legend>
+    <p class="mb-3 text-sm text-base-content/60">Purchases from these merchants count too, whatever their category.</p>
+    <% if merchant_choices.empty? %>
+      <p class="text-sm text-base-content/60">Merchants show up here once you have transactions.</p>
+    <% else %>
+      <input type="search" class="input w-full" placeholder="Search merchants" aria-label="Search merchants"
+             data-list-filter-target="input" data-action="input->list-filter#filter">
+      <div class="mt-2 max-h-64 overflow-y-auto rounded-box border border-base-300 p-1">
+        <%= form.collection_check_boxes :merchants, merchant_choices, :itself, :itself do |box| %>
+          <label class="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 hover:bg-base-200" data-list-filter-target="item" data-filter-text="<%= box.text.downcase %>">
+            <%= box.check_box(class: "checkbox checkbox-sm") %>
+            <span class="truncate"><%= box.text %></span>
+          </label>
+        <% end %>
+        <p class="px-2 py-2 text-sm text-base-content/60" data-list-filter-target="empty" hidden>No merchants match.</p>
+      </div>
+    <% end %>
+  </fieldset>
+
+  <div class="flex items-center gap-3">
+    <%= form.submit budget.new_record? ? "Create budget" : "Save budget", class: "btn btn-primary" %>
+    <%= link_to "Cancel", budget.persisted? ? budget_path(budget) : budgets_path, class: "btn btn-ghost" %>
+  </div>
+<% end %>

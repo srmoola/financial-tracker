@@ -1,0 +1,24 @@
+<% content_for :title, "Budgets · Financial Tracker" %>
+
+<div class="flex flex-wrap items-center justify-between gap-3">
+  <h1 class="text-3xl font-bold tracking-tight">Budgets</h1>
+  <% if @budgets.any? %>
+    <%= link_to "New budget", new_budget_path, class: "btn btn-primary" %>
+  <% end %>
+</div>
+
+<% if @budgets.empty? %>
+  <div class="card mt-8 border border-dashed border-base-300 bg-base-100">
+    <div class="card-body items-center p-10 text-center">
+      <p class="font-semibold">No budgets yet</p>
+      <p class="max-w-md text-sm text-base-content/60">Set a monthly limit, following your card's statement, for any mix of categories and merchants. You'll get an email at 50%, 90% and 100%.</p>
+      <%= link_to "Create a budget", new_budget_path, class: "btn btn-primary mt-3" %>
+    </div>
+  </div>
+<% else %>
+  <div class="mt-8 grid gap-4 lg:grid-cols-2">
+    <% @budgets.each do |budget, status| %>
+      <%= render "budget", budget:, status: %>
+    <% end %>
+  </div>
+<% end %>

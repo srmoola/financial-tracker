@@ -55,6 +55,13 @@
           <% if @sample %>
             <p class="mt-2 text-2xl font-bold tracking-tight"><%= highlight.stat %></p>
             <p class="text-sm text-base-content/60"><%= highlight.detail %></p>
+          <% elsif highlight.section == :budgets %>
+            <% if @budget_statuses.any? %>
+              <p class="mt-2 text-2xl font-bold tracking-tight"><%= @budget_statuses.count { |status| status.state == :on_track } %> of <%= @budget_statuses.size %></p>
+              <p class="text-sm text-base-content/60">budgets on track</p>
+            <% else %>
+              <p class="mt-2 text-sm text-base-content/60">Set a limit for a week or a month</p>
+            <% end %>
           <% elsif highlight.section == :transactions %>
             <p class="mt-2 text-2xl font-bold tracking-tight"><%= number_to_currency(@spent_this_month) %></p>
             <p class="text-sm text-base-content/60">spent on credit cards this statement period</p>

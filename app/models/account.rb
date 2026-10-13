@@ -84,11 +84,9 @@ class Account < ApplicationRecord
     def save_plaid_transaction(plaid_transaction)
       record = transactions.find_or_initialize_by(plaid_transaction_id: plaid_transaction.transaction_id)
       # When a pending charge posts, Plaid sends the posted one as a new transaction (and removes the
-      # pending one), so carry over the category and note the user gave the pending version.
-      if record.new_record? && plaid_transaction.pending_transaction_id
-        pending = transactions.find_by(plaid_transaction_id: plaid_transaction.pending_transaction_id)
-        record.assign_attributes(category_override: pending&.category_override, note: pending&.note)
-      end
+      # pending one), so carry over the category, note and budget exclusions the user gave the pending version.
+      pending = transactions.find_by(plaid_transaction_id: plaid_transaction.pending_transaction_id) if record.new_record? && plaid_transaction.pending_transaction_id
+      record.assign_attributes(category_override: pending.category_override, note: pending.note) if pending
 
       record.update!(
         amount: plaid_transaction.amount,
@@ -104,5 +102,6 @@ class Account < ApplicationRecord
         longitude: plaid_transaction.location&.lon,
         payment_channel: plaid_transaction.payment_channel
       )
+      BudgetExclusion.where(transaction_id: pending.id).update_all(transaction_id: record.id) if pending
     end
 end
