@@ -118,6 +118,77 @@ RSpec.describe Budget do
     end
   end
 
+  describe "rollover" do
+    # Statement months here: Jul 16 – Aug 15, Aug 16 – Sep 15, and this one, Sep 16 – Oct 15.
+    def rollover_budget(**attributes)
+      travel_to Date.new(2026, 8, 1) # turned on during Jul 16 – Aug 15
+      budget(rollover: true, **attributes).tap { travel_to Date.new(2026, 10, 14) }
+    end
+
+    it "adds what's left of each period's limit to the next, from the period it was turned on in" do
+      card
+      going_out = rollover_budget
+      spend(150, Date.new(2026, 7, 20)) # $50 left of $200
+      spend(230, Date.new(2026, 8, 20)) # $20 left of $250
+      spend(100, Date.new(2026, 6, 20)) # before rollover: doesn't carry
+
+      expect(going_out.rollover_started_on).to eq(Date.new(2026, 8, 1))
+      expect(going_out.status).to have_attributes(limit: 220, carried: 20)
+      expect(going_out.history(3).map { |status, _| [ status.starts_on, status.limit, status.carried ] }).to eq([
+        [ Date.new(2026, 8, 16), 250, 50 ],
+        [ Date.new(2026, 7, 16), 200, 0 ],
+        [ Date.new(2026, 6, 16), 200, 0 ]
+      ])
+    end
+
+    it "doesn't take anything away for going over" do
+      card
+      going_out = rollover_budget
+      spend(320, Date.new(2026, 7, 20)) # $120 over
+
+      expect(going_out.status(back: 1)).to have_attributes(limit: 200, carried: 0)
+      expect(going_out.status).to have_attributes(limit: 400, carried: 200) # nothing spent last period
+    end
+
+    it "rolls weeks over too" do
+      card
+      travel_to Date.new(2026, 9, 30)
+      coffee = budget(period: "weekly", amount: 30, rollover: true)
+      travel_to Date.new(2026, 10, 14)
+      spend(10, Date.new(2026, 9, 29))  # week of Sep 28: $20 left
+      spend(45, Date.new(2026, 10, 6))  # week of Oct 5: limit $50, $5 left
+
+      expect(coffee.status).to have_attributes(limit: 35, carried: 5)
+    end
+
+    it "uses the plain limit again once it's turned off, and counts afresh if turned back on" do
+      card
+      going_out = rollover_budget
+      spend(50, Date.new(2026, 8, 20))
+
+      going_out.update!(rollover: false)
+      expect(going_out.rollover_started_on).to be_nil
+      expect(going_out.status).to have_attributes(limit: 200, carried: 0)
+
+      going_out.update!(rollover: true)
+      expect(going_out.rollover_started_on).to eq(Date.new(2026, 10, 14))
+      expect(going_out.status).to have_attributes(limit: 200, carried: 0)
+      going_out.update!(name: "Fun") # other changes keep the start
+      expect(going_out.rollover_started_on).to eq(Date.new(2026, 10, 14))
+    end
+
+    it "alerts against the rolled-over limit" do
+      card
+      going_out = rollover_budget
+      spend(100, Date.new(2026, 7, 20)) # $100 left of $200
+      spend(200, Date.new(2026, 8, 20)) # $100 left of $300
+      spend(160, Date.new(2026, 10, 1)) # 53% of this period's $300 (it'd be 80% of $200)
+
+      expect(going_out.status.limit).to eq(300)
+      expect { going_out.send_alerts! }.to have_enqueued_mail(BudgetsMailer, :threshold).with(going_out, 50)
+    end
+  end
+
   describe "alerts" do
     it "emails the highest threshold reached, once per period" do
       card

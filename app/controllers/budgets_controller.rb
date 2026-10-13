@@ -63,6 +63,6 @@ class BudgetsController < ApplicationController
     end
 
     def budget_params
-      params.expect(budget: [ :name, :amount, :period, categories: [], merchants: [] ])
+      params.expect(budget: [ :name, :amount, :period, :rollover, categories: [], merchants: [] ])
     end
 end

@@ -39,6 +39,14 @@
     </div>
   </fieldset>
 
+  <label class="flex cursor-pointer items-start gap-3">
+    <%= form.check_box :rollover, class: "toggle toggle-sm mt-0.5" %>
+    <span>
+      <span class="block text-sm font-medium">Roll over what's left</span>
+      <span class="block text-sm text-base-content/60">Money you don't spend carries into the next period. Going over doesn't take from the next one.</span>
+    </span>
+  </label>
+
   <fieldset>
     <legend class="text-sm font-medium">Categories</legend>
     <p class="mb-3 text-sm text-base-content/60">Purchases in these categories count toward the budget.</p>

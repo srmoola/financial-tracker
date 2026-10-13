@@ -35,7 +35,7 @@
           <div class="min-w-0 flex-1">
             <p class="font-medium"><%= status.starts_on.strftime("%b %-d") %> – <%= (status.resets_on - 1).strftime(status.resets_on.year == Date.current.year ? "%b %-d" : "%b %-d, %Y") %></p>
             <p class="text-sm text-base-content/60 tabular-nums">
-              <%= number_to_currency(status.spent) %> of <%= number_to_currency(@budget.amount) %>
+              <%= number_to_currency(status.spent) %> of <%= number_to_currency(status.limit) %><%= " (#{number_to_currency(status.carried)} rolled over)" if status.carried.positive? %>
               <% if partial %><span class="text-base-content/50">· partial: your data starts partway through</span><% end %>
             </p>
             <div class="mt-2 h-1.5 rounded-full bg-base-200" aria-hidden="true">

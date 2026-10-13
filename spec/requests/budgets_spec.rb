@@ -43,6 +43,23 @@ RSpec.describe "Budgets", type: :request do
       expect(response.body).to include("Going out", "$150.00", "of $200.00", "$50.00 left", "Food &amp; drink", "Entertainment", "Blue Bottle", "Weekly · ", "Resets Mon, ")
     end
 
+    it "can roll over what's left, shown on the card" do
+      travel_to Date.new(2026, 10, 14) do
+        card.update!(last_statement_issue_date: Date.new(2026, 9, 15))
+
+        get new_budget_path
+        expect(response.body).to include("Roll over what's left")
+
+        post budgets_path, params: { budget: { name: "Going out", amount: "200", period: "monthly", rollover: "1", categories: [ "", "FOOD_AND_DRINK" ] } }
+        budget = Budget.last
+        expect(budget).to have_attributes(rollover: true, rollover_started_on: Date.new(2026, 10, 14))
+
+        budget.update_column(:rollover_started_on, Date.new(2026, 9, 1)) # as if turned on last statement month
+        get budgets_path
+        expect(response.body).to include("Monthly · Rolls over", "of $400.00", "Includes $200.00 rolled over")
+      end
+    end
+
     it "shows what's missing" do
       post budgets_path, params: { budget: { name: "", amount: "", period: "monthly", categories: [ "" ] } }
 
