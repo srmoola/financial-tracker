@@ -1,40 +1,114 @@
 <%# locals: (subscription:) %>
-<%# A subscription row; opens to show its past charges and "Not a subscription". %>
-<li>
-  <details class="group">
-    <summary class="flex cursor-pointer list-none items-center gap-4 px-6 py-4 transition-colors hover:bg-base-200/50 [&::-webkit-details-marker]:hidden">
-      <div class="grid size-10 shrink-0 place-items-center rounded-xl bg-base-200 text-sm font-semibold" aria-hidden="true"><%= subscription.merchant.first.upcase %></div>
-      <div class="min-w-0 flex-1">
-        <p class="flex items-center gap-2 font-medium">
-          <span class="truncate"><%= subscription.merchant %></span>
-          <% if subscription.new? %><span class="badge badge-soft badge-secondary badge-sm shrink-0">New</span><% end %>
-        </p>
-        <p class="truncate text-xs text-base-content/60">
-          <%= subscription.label %><%= " · #{subscription.account.name} •••• #{subscription.account.mask}" if subscription.account&.mask.present? %>
-          <% if subscription.previous_amount && subscription.amount > subscription.previous_amount %>
-            · <span class="font-medium text-amber-700">Price went up from <%= number_to_currency(subscription.previous_amount) %></span>
-          <% end %>
-        </p>
+<%# A subscription's card, with its tags (added and removed right in its header); opens to show its numbers, past charges and "Not a subscription". Changing a tag updates just this card. %>
+<li class="card overflow-hidden border border-base-300 bg-base-100 transition-shadow has-[[data-open]]:shadow-md">
+  <%= turbo_frame_tag subscription.dom_id do %>
+    <div data-controller="disclosure">
+      <div class="flex cursor-pointer items-center gap-4 px-5 py-4 transition-colors hover:bg-base-200/50 sm:px-6" data-action="click->disclosure#toggle">
+        <div class="grid size-10 shrink-0 place-items-center rounded-xl bg-base-200 text-sm font-semibold" aria-hidden="true"><%= subscription.merchant.first.upcase %></div>
+        <div class="min-w-0 flex-1">
+          <%# The + to add a tag shows when hovering over the name and tags (always, on touch screens). %>
+          <div class="group/tags flex flex-wrap items-center gap-1.5">
+            <p class="mr-0.5 truncate font-medium"><%= subscription.merchant %></p>
+            <% if subscription.new? %>
+              <span class="badge badge-sm gap-0.5 border-error/25 bg-error/10 pr-0.5 text-error">
+                New
+                <%= button_to seen_subscriptions_path, params: { subscription: subscription.key }, form_class: "contents",
+                      class: "grid size-4 cursor-pointer place-items-center rounded-full text-error/70 hover:bg-error/15 hover:text-error", aria: { label: "Remove New from #{subscription.merchant}" } do %>
+                  <svg class="size-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                <% end %>
+              </span>
+            <% end %>
+            <% subscription.tags.each do |tag| %>
+              <span class="badge badge-sm gap-0.5 border-secondary/30 bg-secondary/10 pr-0.5 text-secondary">
+                <%= tag %>
+                <%= button_to tags_subscriptions_path, params: { subscription: subscription.key, tags: subscription.tags - [ tag ] }, form_class: "contents",
+                      class: "grid size-4 cursor-pointer place-items-center rounded-full text-secondary/70 hover:bg-secondary/15 hover:text-secondary", aria: { label: "Remove tag #{tag}" } do %>
+                  <svg class="size-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                <% end %>
+              </span>
+            <% end %>
+            <% if subscription.tags.size < SubscriptionMark::MAX_TAGS %>
+              <% tagging = params[:tagging] == subscription.dom_id %>
+              <span class="contents" data-controller="tag-input">
+                <button type="button" class="badge badge-sm size-5 cursor-pointer justify-center border-dashed border-base-300 bg-transparent p-0 text-base-content/60 transition-opacity hover:border-base-content/40 hover:text-base-content focus-visible:opacity-100 group-hover/tags:opacity-100 [@media(hover:hover)]:opacity-0"
+                        aria-label="Add a tag to <%= subscription.merchant %>" data-tag-input-target="button" data-action="tag-input#show" <%= "hidden" if tagging %>>+</button>
+                <%= form_with url: tags_subscriptions_path, class: "contents", html: { hidden: !tagging }, data: { tag_input_target: "form" } do |form| %>
+                  <% subscription.key.each do |name, value| %>
+                    <%= hidden_field_tag "subscription[#{name}]", value, id: nil %>
+                  <% end %>
+                  <% subscription.tags.each do |tag| %>
+                    <%= hidden_field_tag "tags[]", tag, id: nil %>
+                  <% end %>
+                  <%= text_field_tag "tags[]", nil, id: nil, maxlength: SubscriptionMark::TAG_MAX_LENGTH, autocomplete: "off", autofocus: tagging, placeholder: "New tag",
+                        class: "input input-xs w-28 rounded-full", aria: { label: "New tag for #{subscription.merchant}" },
+                        data: { tag_input_target: "input", action: "blur->tag-input#hide keydown.esc->tag-input#cancel" } %>
+                <% end %>
+              </span>
+            <% end %>
+          </div>
+          <p class="truncate text-xs text-base-content/60">
+            <%= subscription.label %><%= " · #{subscription.account.name} •••• #{subscription.account.mask}" if subscription.account&.mask.present? %>
+            <% if subscription.previous_amount && subscription.amount > subscription.previous_amount %>
+              · <span class="font-medium text-amber-700">Price went up from <%= number_to_currency(subscription.previous_amount) %></span>
+            <% end %>
+          </p>
+        </div>
+        <div class="flex-none text-right">
+          <p class="font-semibold tabular-nums"><%= number_to_currency(subscription.amount) %><span class="text-xs font-normal text-base-content/60">/<%= subscription.period == "monthly" ? "mo" : "yr" %></span></p>
+          <p class="text-xs text-base-content/60">
+            <%= subscription.status == :ended ? "Last #{subscription.last_on.strftime("%b %-d")}" : "Next #{subscription.next_on.strftime("%b %-d, %Y")}" %>
+          </p>
+        </div>
+        <button type="button" class="grid size-6 shrink-0 cursor-pointer place-items-center rounded-full text-base-content/40 transition-transform aria-expanded:rotate-180"
+                aria-expanded="false" aria-controls="<%= subscription.dom_id %>_details" aria-label="Details for <%= subscription.merchant %>" data-disclosure-target="button">
+          <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
       </div>
-      <div class="flex-none text-right">
-        <p class="font-semibold tabular-nums"><%= number_to_currency(subscription.amount) %><span class="text-xs font-normal text-base-content/60">/<%= subscription.period == "monthly" ? "mo" : "yr" %></span></p>
-        <p class="text-xs text-base-content/60">
-          <%= subscription.status == :ended ? "Last #{subscription.last_on.strftime("%b %-d")}" : "Next #{subscription.next_on.strftime("%b %-d")}" %>
-        </p>
+
+      <div id="<%= subscription.dom_id %>_details" class="space-y-5 border-t border-base-300 bg-base-200/40 px-5 py-5 sm:px-6" hidden data-disclosure-target="panel">
+        <dl class="grid grid-cols-3 gap-2 sm:gap-3">
+          <div class="rounded-box border border-base-300 bg-base-100 px-3 py-2.5 sm:px-4">
+            <dt class="text-xs text-base-content/60"><%= subscription.status == :ended ? "Last charge" : "Next charge" %></dt>
+            <dd class="mt-0.5 whitespace-nowrap text-sm font-semibold tabular-nums sm:text-base"><%= (subscription.status == :ended ? subscription.last_on : subscription.next_on).strftime("%b %-d, %Y") %></dd>
+          </div>
+          <div class="rounded-box border border-base-300 bg-base-100 px-3 py-2.5 sm:px-4">
+            <dt class="text-xs text-base-content/60"><%= subscription.period == "monthly" ? "Per year" : "Per month" %></dt>
+            <dd class="mt-0.5 whitespace-nowrap text-sm font-semibold tabular-nums sm:text-base"><%= number_to_currency(subscription.period == "monthly" ? subscription.yearly_cost : subscription.monthly_cost) %></dd>
+          </div>
+          <div class="rounded-box border border-base-300 bg-base-100 px-3 py-2.5 sm:px-4">
+            <dt class="text-xs text-base-content/60">Total paid</dt>
+            <dd class="mt-0.5 whitespace-nowrap text-sm font-semibold tabular-nums sm:text-base"><%= number_to_currency(subscription.charges.sum(&:amount)) %></dd>
+          </div>
+        </dl>
+
+        <div>
+          <p class="text-xs font-medium text-base-content/60">Charges</p>
+          <div class="mt-1.5 overflow-hidden rounded-box border border-base-300 bg-base-100">
+            <table class="table table-sm tabular-nums">
+              <thead>
+                <tr><th>Date</th><th class="text-right">Amount</th></tr>
+              </thead>
+              <tbody>
+                <% subscription.charges.each_with_index.reverse_each do |charge, index| %>
+                  <% change = charge.amount - subscription.charges[index - 1].amount if index.positive? %>
+                  <tr>
+                    <td class="whitespace-nowrap"><%= charge.date.strftime("%b %-d, %Y") %></td>
+                    <td class="text-right font-medium">
+                      <% if change&.nonzero? %><span class="mr-2 text-xs font-normal <%= change.positive? ? "text-amber-700" : "text-success" %>"><%= change.positive? ? "+" : "−" %><%= number_to_currency(change.abs) %></span><% end %>
+                      <%= number_to_currency(charge.amount) %>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="flex justify-end">
+          <%= button_to "Not a subscription", dismiss_subscriptions_path, params: { subscription: subscription.key },
+                class: "btn btn-sm btn-outline btn-error", form: { data: { turbo_frame: "_top", turbo_confirm: "Stop showing #{subscription.merchant} as a subscription?" } } %>
+        </div>
       </div>
-      <svg class="size-4 shrink-0 text-base-content/40 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-    </summary>
-    <div class="flex flex-wrap items-end justify-between gap-3 border-t border-base-300 bg-base-200/30 px-6 py-3 sm:pl-20">
-      <div>
-        <p class="text-xs font-medium text-base-content/60">Charges</p>
-        <ul class="mt-1 space-y-0.5 text-sm tabular-nums">
-          <% subscription.charges.reverse_each do |charge| %>
-            <li><%= charge.date.strftime("%b %-d, %Y") %> · <%= number_to_currency(charge.amount) %></li>
-          <% end %>
-        </ul>
-      </div>
-      <%= button_to "Not a subscription", dismiss_subscriptions_path, params: { subscription: subscription.key },
-            class: "btn btn-ghost btn-sm text-base-content/70", form: { data: { turbo_confirm: "Stop showing #{subscription.merchant} as a subscription?" } } %>
     </div>
-  </details>
+  <% end %>
 </li>

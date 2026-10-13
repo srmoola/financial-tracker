@@ -1,5 +1,5 @@
 # The subscriptions found in the user's card purchases (see Subscription),
-# and adding, confirming or dismissing them.
+# and adding, confirming, dismissing or tagging them.
 class SubscriptionsController < ApplicationController
   ADD_FROM_DAYS = 90
 
@@ -37,7 +37,39 @@ class SubscriptionsController < ApplicationController
     redirect_to subscriptions_path, notice: "#{mark.merchant} won't show up as a subscription.", status: :see_other
   end
 
+  # Sets a subscription's tags (all of them, so removing one sends the rest).
+  # After adding one, the field to add another stays open.
+  def tags
+    subscription = find_subscription
+    mark = mark_for(subscription)
+    tags_before = mark.tags.size
+
+    if mark.update(tags: Array(params[:tags]).map(&:to_s))
+      adding = mark.tags.size > tags_before && mark.tags.size < SubscriptionMark::MAX_TAGS
+      redirect_to subscriptions_path(tagging: (subscription.dom_id if adding)), status: :see_other
+    else
+      head :unprocessable_content
+    end
+  end
+
+  # Removes a subscription's "New" chip.
+  def seen
+    mark_for(find_subscription).update!(seen: true)
+    redirect_to subscriptions_path, status: :see_other
+  end
+
   private
+    # The subscription the params' key names.
+    def find_subscription
+      key = params.expect(subscription: [ :merchant, :amount, :period ])
+      Subscription.for(Current.user).find { |candidate| candidate.key == { merchant: key[:merchant], amount: BigDecimal(key[:amount]), period: key[:period] } } or
+        raise ActiveRecord::RecordNotFound
+    end
+
+    # Its mark, or a new "confirmed" one to hold its tags or "seen": changing
+    # those says it's a subscription.
+    def mark_for(subscription) = subscription.mark || Current.user.subscription_marks.new(kind: "confirmed", **subscription.key)
+
     def mark!(kind)
       key = params.expect(subscription: [ :merchant, :amount, :period ])
       marks = Current.user.subscription_marks

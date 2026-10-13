@@ -8,7 +8,8 @@
 #   toward a subscription when it's within 5% of its last one, or, for a price
 #   change, within 25% and on schedule after two charges at the old price.
 # - It has *ended* once its next charge is overdue by the grace period.
-# - The user's SubscriptionMarks confirm, dismiss or add subscriptions by hand.
+# - The user's SubscriptionMarks confirm, dismiss or add subscriptions by hand,
+#   and hold their tags.
 class Subscription
   PERIODS = {
     "monthly" => { label: "Monthly", gaps: 26..35, every: 1.month, grace: 10.days },
@@ -20,7 +21,7 @@ class Subscription
 
   Charge = Data.define(:id, :account_id, :date, :amount, :arrived_at)
 
-  attr_reader :merchant, :period, :charges, :status, :account
+  attr_reader :merchant, :period, :charges, :status, :account, :mark
 
   # Every subscription for `user` (active, possible and ended), biggest monthly cost first.
   def self.for(user, today: Date.current)
@@ -38,7 +39,7 @@ class Subscription
     added = marks.select { |mark| mark.kind == "added" && found.none? { |subscription| mark.matches?(subscription) } }.map do |mark|
       same = charges.fetch(mark.merchant, []).select { |charge| close?(charge.amount, mark.amount) }
       same = [ Charge.new(id: nil, account_id: nil, date: mark.charged_on, amount: mark.amount, arrived_at: mark.created_at) ] if same.empty?
-      new(mark.merchant, mark.period, same, accounts, today, confirmed: true, added: true)
+      new(mark.merchant, mark.period, same, accounts, today, confirmed: true, added: true, mark:)
     end
 
     (found + added).sort_by { |subscription| -subscription.monthly_cost }
@@ -78,13 +79,15 @@ class Subscription
     mark = marks.find { |candidate| candidate.matches?(subscription) }
     return if mark&.kind == "dismissed"
 
-    mark ? new(merchant, period, charges, accounts, today, confirmed: true, added: mark.kind == "added") : subscription
+    mark ? new(merchant, period, charges, accounts, today, confirmed: true, added: mark.kind == "added", mark:) : subscription
   end
   private_class_method :groups, :price_change?, :detect
 
   # `added`: the user added it by hand (so it's never "new" to them).
-  def initialize(merchant, period, charges, accounts, today, confirmed: false, added: false)
+  # `mark`: the user's SubscriptionMark for it, if any.
+  def initialize(merchant, period, charges, accounts, today, confirmed: false, added: false, mark: nil)
     @merchant = merchant
+    @mark = mark
     @period = period
     @charges = charges
     @account = accounts[charges.last.account_id]
@@ -104,11 +107,16 @@ class Subscription
   def monthly_cost = period == "monthly" ? amount : amount / 12
   def yearly_cost = period == "monthly" ? amount * 12 : amount
   def label = PERIODS.fetch(period)[:label]
+  def tags = mark&.tags || []
 
   # Found (its second charge came in) during `times`; added-by-hand ones aren't news.
   def found_during?(times) = status != :ended && !@added && charges.size >= 2 && times.cover?(charges[1].arrived_at)
-  def new?(now: Time.current) = found_during?((now - NEW_FOR)..now)
+  # Found lately, unless the user removed its "New" chip.
+  def new?(now: Time.current) = !mark&.seen? && found_during?((now - NEW_FOR)..now)
 
   # Identifies it for SubscriptionMarks.
   def key = { merchant:, amount:, period: }
+
+  # Identifies it on the page.
+  def dom_id = "subscription_#{Digest::SHA1.hexdigest([ merchant, amount.to_s, period ].join("|")).first(12)}"
 end

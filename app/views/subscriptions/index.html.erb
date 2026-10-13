@@ -4,7 +4,7 @@
   <h1 class="text-3xl font-bold tracking-tight">Subscriptions</h1>
   <%= link_to "Add a subscription", new_subscription_path, class: "btn btn-outline" %>
 </div>
-<p class="mt-1 text-base-content/70">Monthly and yearly charges found on your credit cards.</p>
+<p class="mt-1 text-base-content/70">Your current recurring subscriptions</p>
 
 <% if @active.any? %>
   <section class="card mt-8 border border-base-300 bg-base-100" aria-label="Total">
@@ -14,7 +14,7 @@
     </div>
   </section>
 
-  <ul class="card mt-4 divide-y divide-base-300 overflow-hidden border border-base-300 bg-base-100" aria-label="Your subscriptions">
+  <ul class="mt-4 space-y-3" aria-label="Your subscriptions">
     <% @active.each do |subscription| %>
       <%= render "subscription", subscription: %>
     <% end %>
@@ -54,7 +54,7 @@
   <details class="mt-10">
     <summary class="cursor-pointer text-sm font-medium text-base-content/70 hover:text-base-content">Ended (<%= @ended.size %>)</summary>
     <p class="mt-1 text-sm text-base-content/60">No charge since one was due.</p>
-    <ul class="card mt-3 divide-y divide-base-300 overflow-hidden border border-base-300 bg-base-100 opacity-80">
+    <ul class="mt-3 space-y-3 opacity-80">
       <% @ended.each do |subscription| %>
         <%= render "subscription", subscription: %>
       <% end %>

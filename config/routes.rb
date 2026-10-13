@@ -32,6 +32,8 @@ Rails.application.routes.draw do
     collection do
       post :confirm
       post :dismiss
+      post :tags
+      post :seen
     end
   end
 
