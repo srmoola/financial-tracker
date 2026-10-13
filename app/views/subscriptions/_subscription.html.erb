@@ -66,43 +66,41 @@
       </div>
 
       <div id="<%= subscription.dom_id %>_details" class="space-y-5 border-t border-base-300 bg-base-200/40 px-5 py-5 sm:px-6" hidden data-disclosure-target="panel">
-        <div class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] lg:gap-6">
-          <dl class="grid grid-cols-3 gap-2 self-start sm:gap-3 lg:grid-cols-1 lg:mt-[1.375rem]">
-            <div class="rounded-box border border-base-300 bg-base-100 px-3 py-2.5 sm:px-4">
-              <dt class="text-xs text-base-content/60"><%= subscription.status == :ended ? "Last charge" : "Next charge" %></dt>
-              <dd class="mt-0.5 whitespace-nowrap text-sm font-semibold tabular-nums sm:text-base"><%= (subscription.status == :ended ? subscription.last_on : subscription.next_on).strftime("%b %-d, %Y") %></dd>
-            </div>
-            <div class="rounded-box border border-base-300 bg-base-100 px-3 py-2.5 sm:px-4">
-              <dt class="text-xs text-base-content/60"><%= subscription.period == "monthly" ? "Per year" : "Per month" %></dt>
-              <dd class="mt-0.5 whitespace-nowrap text-sm font-semibold tabular-nums sm:text-base"><%= number_to_currency(subscription.period == "monthly" ? subscription.yearly_cost : subscription.monthly_cost) %></dd>
-            </div>
-            <div class="rounded-box border border-base-300 bg-base-100 px-3 py-2.5 sm:px-4">
-              <dt class="text-xs text-base-content/60">Total paid</dt>
-              <dd class="mt-0.5 whitespace-nowrap text-sm font-semibold tabular-nums sm:text-base"><%= number_to_currency(subscription.charges.sum(&:amount)) %></dd>
-            </div>
-          </dl>
+        <dl class="grid grid-cols-3 gap-2 sm:gap-3">
+          <div class="rounded-box border border-base-300 bg-base-100 px-3 py-2.5 sm:px-4">
+            <dt class="text-xs text-base-content/60"><%= subscription.status == :ended ? "Last charge" : "Next charge" %></dt>
+            <dd class="mt-0.5 whitespace-nowrap text-sm font-semibold tabular-nums sm:text-base"><%= (subscription.status == :ended ? subscription.last_on : subscription.next_on).strftime("%b %-d, %Y") %></dd>
+          </div>
+          <div class="rounded-box border border-base-300 bg-base-100 px-3 py-2.5 sm:px-4">
+            <dt class="text-xs text-base-content/60"><%= subscription.period == "monthly" ? "Per year" : "Per month" %></dt>
+            <dd class="mt-0.5 whitespace-nowrap text-sm font-semibold tabular-nums sm:text-base"><%= number_to_currency(subscription.period == "monthly" ? subscription.yearly_cost : subscription.monthly_cost) %></dd>
+          </div>
+          <div class="rounded-box border border-base-300 bg-base-100 px-3 py-2.5 sm:px-4">
+            <dt class="text-xs text-base-content/60">Total paid</dt>
+            <dd class="mt-0.5 whitespace-nowrap text-sm font-semibold tabular-nums sm:text-base"><%= number_to_currency(subscription.charges.sum(&:amount)) %></dd>
+          </div>
+        </dl>
 
-          <div>
-            <p class="text-xs font-medium text-base-content/60">Charges</p>
-            <div class="mt-1.5 overflow-hidden rounded-box border border-base-300 bg-base-100">
-              <table class="table table-sm tabular-nums">
-                <thead>
-                  <tr><th>Date</th><th class="text-right">Amount</th></tr>
-                </thead>
-                <tbody>
-                  <% subscription.charges.each_with_index.reverse_each do |charge, index| %>
-                    <% change = charge.amount - subscription.charges[index - 1].amount if index.positive? %>
-                    <tr>
-                      <td class="whitespace-nowrap"><%= charge.date.strftime("%b %-d, %Y") %></td>
-                      <td class="text-right font-medium">
-                        <% if change&.nonzero? %><span class="mr-2 text-xs font-normal <%= change.positive? ? "text-amber-700" : "text-success" %>"><%= change.positive? ? "+" : "−" %><%= number_to_currency(change.abs) %></span><% end %>
-                        <%= number_to_currency(charge.amount) %>
-                      </td>
-                    </tr>
-                  <% end %>
-                </tbody>
-              </table>
-            </div>
+        <div>
+          <p class="text-xs font-medium text-base-content/60">Charges</p>
+          <div class="mt-1.5 overflow-hidden rounded-box border border-base-300 bg-base-100">
+            <table class="table table-sm tabular-nums">
+              <thead>
+                <tr><th>Date</th><th class="text-right">Amount</th></tr>
+              </thead>
+              <tbody>
+                <% subscription.charges.each_with_index.reverse_each do |charge, index| %>
+                  <% change = charge.amount - subscription.charges[index - 1].amount if index.positive? %>
+                  <tr>
+                    <td class="whitespace-nowrap"><%= charge.date.strftime("%b %-d, %Y") %></td>
+                    <td class="text-right font-medium">
+                      <% if change&.nonzero? %><span class="mr-2 text-xs font-normal <%= change.positive? ? "text-amber-700" : "text-success" %>"><%= change.positive? ? "+" : "−" %><%= number_to_currency(change.abs) %></span><% end %>
+                      <%= number_to_currency(charge.amount) %>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
           </div>
         </div>
 

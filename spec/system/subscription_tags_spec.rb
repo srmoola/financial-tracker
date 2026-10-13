@@ -15,10 +15,10 @@ RSpec.describe "Tagging subscriptions", type: :system do
     expect(page).to have_text("Jane Doe") # logged in
     visit subscriptions_path
 
-    find("button[aria-label='Remove New from Amazon']").click
-    expect(page).to have_no_css(".badge", text: "New")
     expect(page).to have_no_css("input[placeholder='New tag']") # until + is pressed
     expect(page).to have_no_button("+") # until the name and tags are hovered over
+    find("button[aria-label='Remove New from Amazon']").click
+    expect(page).to have_no_css(".badge", text: "New")
     find("p", text: "Amazon").hover
     click_on "+"
     find("input[placeholder='New tag']").send_keys("Prime Video", :enter)
