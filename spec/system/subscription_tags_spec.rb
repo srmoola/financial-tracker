@@ -16,8 +16,10 @@ RSpec.describe "Tagging subscriptions", type: :system do
     visit subscriptions_path
 
     expect(page).to have_css(".badge", text: "New")
-    expect(page).to have_no_css("input[placeholder='New tag']") # until + Tag is pressed
-    click_on "+ Tag"
+    expect(page).to have_no_css("input[placeholder='New tag']") # until + is pressed
+    expect(page).to have_no_button("+") # until the name and tags are hovered over
+    find("p", text: "Amazon").hover
+    click_on "+"
     find("input[placeholder='New tag']").send_keys("Prime Video", :enter)
 
     expect(page).to have_css(".badge", text: "Prime Video")
