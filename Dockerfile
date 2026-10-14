@@ -21,11 +21,13 @@ RUN apt-get update -qq && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # Set production environment variables and enable jemalloc for reduced memory usage and latency.
+# RUBY_GC_HEAP_GROWTH_FACTOR: grow Ruby's heap 10% at a time rather than 80%, so it holds less unused memory.
 ENV RAILS_ENV="production" \
     BUNDLE_DEPLOYMENT="1" \
     BUNDLE_PATH="/usr/local/bundle" \
     BUNDLE_WITHOUT="development" \
-    LD_PRELOAD="/usr/local/lib/libjemalloc.so"
+    LD_PRELOAD="/usr/local/lib/libjemalloc.so" \
+    RUBY_GC_HEAP_GROWTH_FACTOR="1.1"
 
 # Throw-away build stage to reduce size of final image
 FROM base AS build
