@@ -17,7 +17,9 @@ default: &default
   encoding: unicode
   # For details on connection pooling, see Rails configuration guide
   # https://guides.rubyonrails.org/configuring.html#database-pooling
-  max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  # Puma's threads, plus room for Solid Queue's when it runs inside Puma (its
+  # worker threads, dispatcher, scheduler and supervisor share this pool).
+  max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 }.to_i + (ENV["SOLID_QUEUE_IN_PUMA"] ? 6 : 0) %>
   <% if ENV["DB_HOST"] %>
   host: <%= ENV["DB_HOST"] %>
   username: <%= ENV.fetch("DB_USERNAME", "postgres") %>
