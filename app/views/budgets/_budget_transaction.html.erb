@@ -15,6 +15,7 @@
     <%= button_to "Count again", budget_exclusion_path(budget, transaction, back: (back if back.positive?)), method: :delete, class: "btn btn-ghost btn-xs" %>
   <% else %>
     <%= button_to budget_exclusions_path(budget, transaction_id: transaction.id, back: (back if back.positive?)),
+          form: { data: { turbo_confirm: "Stop counting #{transaction.display_name} (#{number_to_currency(transaction.counted_amount)}) in #{budget.name}? You can count it again later." } },
           class: "btn btn-ghost btn-square btn-sm text-base-content/50 hover:text-base-content",
           aria: { label: "Don't count #{transaction.display_name} in #{budget.name}" }, title: "Don't count this in #{budget.name}" do %>
       <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>

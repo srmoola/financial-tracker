@@ -126,6 +126,7 @@ RSpec.describe "Budgets", type: :request do
         expect(response.body).to include("2 transactions adding up to $65.00, biggest first", "Chipotle", "Food &amp; drink · Oct 2", "$40.00", "Blue Bottle", "Don&#39;t count Chipotle in Going out")
         expect(response.body).not_to include("Delta", "Last Month")
         expect(response.body.index("Chipotle")).to be < response.body.index("Blue Bottle") # biggest first
+        expect(response.body).to include('data-turbo-confirm="Stop counting Chipotle ($40.00) in Going out? You can count it again later."')
       end
 
       it "takes a transaction out of the budget, and puts it back" do
@@ -161,7 +162,7 @@ RSpec.describe "Budgets", type: :request do
         expect(response.body).to include(budget_path(budget, back: 1))
 
         get budget_path(budget, back: 1)
-        expect(response.body).to include("You're looking at a past month: Aug 16 – Sep 15", "Past month", "Ended Sep 15, 2026", "Over budget", "$50.00 over", "Big Night Out", "Back to this month")
+        expect(response.body).to include('data-scroll-to="#period"', "You're looking at a past month: Aug 16 – Sep 15", "Past month", "Ended Sep 15, 2026", "Over budget", "$50.00 over", "Big Night Out", "Back to this month")
 
         get budget_path(budget)
         expect(response.body).not_to include("You're looking at a past month", "Past month")
@@ -173,10 +174,10 @@ RSpec.describe "Budgets", type: :request do
 
         get budget_path(budget)
 
-        shown, more = response.body.split("Show all 7 transactions")
+        shown, more = response.body.split('id="more-budget-transactions"')
         expect(shown).to include("Place 6", "Place 2", 'src="https://logos.example/place.png"')
         expect(shown).not_to include("Place 1", "Place 0")
-        expect(more).to include("Place 1", "Place 0")
+        expect(more).to include("Place 1", "Place 0", "Show less")
       end
 
       it "doesn't offer Show all for 5 or fewer" do
