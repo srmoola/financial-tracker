@@ -9,6 +9,10 @@ Rails.application.configure do
   # Eager load code on boot for better performance and memory savings (ignored by Rake tasks).
   config.eager_load = true
 
+  # No YJIT: it speeds Ruby up but uses ~30 MB more once warmed up, and the
+  # app has to fit in a 500 MB container while its traffic is tiny.
+  config.yjit = false
+
   # Full error reports are disabled.
   config.consider_all_requests_local = false
 
