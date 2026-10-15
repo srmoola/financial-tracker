@@ -106,7 +106,7 @@
 
         <div class="flex justify-end">
           <%= button_to "Not a subscription", dismiss_subscriptions_path, params: { subscription: subscription.key },
-                class: "btn btn-sm btn-outline btn-error", form: { data: { turbo_frame: "_top", turbo_confirm: "Stop showing #{subscription.merchant} as a subscription?" } } %>
+                class: "btn btn-sm btn-outline btn-error", form: { data: { turbo_frame: "_top", turbo_confirm: "Stop showing #{subscription.merchant} as a subscription?", confirm_button: "Not a subscription" } } %>
         </div>
       </div>
     </div>
