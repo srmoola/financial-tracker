@@ -1,9 +1,7 @@
 <%# locals: (budget:, transaction:, back:, excluded:) %>
 <%# A transaction on a budget's page, with a button to take it out of the budget (or put it back). %>
 <li class="<%= class_names("flex items-center gap-4 px-6 py-3", "opacity-60": excluded) %>">
-  <div class="grid size-9 shrink-0 place-items-center rounded-xl bg-base-200 text-sm font-semibold" aria-hidden="true">
-    <%= transaction.masked_description? ? "?" : transaction.display_name.first.upcase %>
-  </div>
+  <%= merchant_logo(transaction.logo_url, transaction.masked_description? ? "?" : transaction.display_name, size: "size-9") %>
   <div class="min-w-0 flex-1">
     <p class="truncate font-medium"><%= transaction.display_name %></p>
     <p class="truncate text-xs text-base-content/60">

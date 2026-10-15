@@ -123,7 +123,7 @@ RSpec.describe "Budgets", type: :request do
 
         get budget_path(budget)
 
-        expect(response.body).to include("2 transactions adding up to $65.00", "Chipotle", "Food &amp; drink · Oct 2", "$40.00", "Blue Bottle", "Don&#39;t count Chipotle in Going out")
+        expect(response.body).to include("2 transactions adding up to $65.00, biggest first", "Chipotle", "Food &amp; drink · Oct 2", "$40.00", "Blue Bottle", "Don&#39;t count Chipotle in Going out")
         expect(response.body).not_to include("Delta", "Last Month")
         expect(response.body.index("Chipotle")).to be < response.body.index("Blue Bottle") # biggest first
       end
@@ -161,7 +161,30 @@ RSpec.describe "Budgets", type: :request do
         expect(response.body).to include(budget_path(budget, back: 1))
 
         get budget_path(budget, back: 1)
-        expect(response.body).to include("Aug 16 – Sep 15", "Over budget", "$50.00 over", "Big Night Out", "Back to this month")
+        expect(response.body).to include("You're looking at a past month: Aug 16 – Sep 15", "Past month", "Ended Sep 15, 2026", "Over budget", "$50.00 over", "Big Night Out", "Back to this month")
+
+        get budget_path(budget)
+        expect(response.body).not_to include("You're looking at a past month", "Past month")
+      end
+
+      it "shows the 5 biggest transactions, with the rest behind Show all" do
+        7.times { |n| add("t#{n}", 10 + n, Date.new(2026, 10, 2), merchant: "Place #{n}") }
+        card.transactions.find_by!(plaid_transaction_id: "t6").update!(logo_url: "https://logos.example/place.png")
+
+        get budget_path(budget)
+
+        shown, more = response.body.split("Show all 7 transactions")
+        expect(shown).to include("Place 6", "Place 2", 'src="https://logos.example/place.png"')
+        expect(shown).not_to include("Place 1", "Place 0")
+        expect(more).to include("Place 1", "Place 0")
+      end
+
+      it "doesn't offer Show all for 5 or fewer" do
+        5.times { |n| add("t#{n}", 10 + n, Date.new(2026, 10, 2)) }
+
+        get budget_path(budget)
+
+        expect(response.body).not_to include("Show all")
       end
 
       it "won't take another user's transaction" do
