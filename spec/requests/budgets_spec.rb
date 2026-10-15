@@ -126,7 +126,8 @@ RSpec.describe "Budgets", type: :request do
         expect(response.body).to include("2 transactions adding up to $65.00, biggest first", "Chipotle", "Food &amp; drink · Oct 2", "$40.00", "Blue Bottle", "Don&#39;t count Chipotle in Going out")
         expect(response.body).not_to include("Delta", "Last Month")
         expect(response.body.index("Chipotle")).to be < response.body.index("Blue Bottle") # biggest first
-        expect(response.body).to include('data-turbo-confirm="Stop counting Chipotle ($40.00) in Going out? You can count it again later."')
+        expect(response.body).to include('data-turbo-confirm="Stop counting Chipotle ($40.00) in Going out? You can count it again later." data-confirm-button="Stop counting"')
+        expect(response.body).to include('data-controller="confirm"') # the app's own confirmation dialog
       end
 
       it "takes a transaction out of the budget, and puts it back" do
